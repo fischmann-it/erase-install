@@ -16,6 +16,16 @@ Since the package on this site is not signed, if you download this package from 
 
 No date
 
+## [40.0]
+
+No date
+
+### Updates in 40.0
+
+- Fixed an issue where user language is not respected in the password entry field (addresses #563).
+
+### Bugfixes in 40.0
+
 ## [39.1]
 
 23.09.2025
@@ -773,7 +783,8 @@ Thanks to '@ahousseini' for various contributions to this release
 
 - Initial version. Expects a manual choice of installer from `installinstallmacos.py`.
 
-[untagged]: https://github.com/grahampugh/erase-install/compare/v39.1...HEAD
+[untagged]: https://github.com/grahampugh/erase-install/compare/v40.0...HEAD
+[40.0]: https://github.com/grahampugh/erase-install/compare/v39.1...v40.0
 [39.1]: https://github.com/grahampugh/erase-install/compare/v39.0...v39.1
 [39.0]: https://github.com/grahampugh/erase-install/compare/v38.0...v39.0
 [38.0]: https://github.com/grahampugh/erase-install/compare/v37.0...v38.0

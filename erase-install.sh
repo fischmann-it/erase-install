@@ -130,8 +130,8 @@ ask_for_credentials() {
         dialog_args+=("-2")
     fi
 
-    # run the dialog command
-    "$dialog_bin" "${dialog_args[@]}" 2>/dev/null > "$dialog_output"
+    # run the dialog command (set language for password prompt)
+    "$dialog_bin" "${dialog_args[@]}" -AppleLanguages "($language)" -AppleAccentColor $accent_colour 2>/dev/null > "$dialog_output"
 }
 
 # -----------------------------------------------------------------------------
@@ -2712,6 +2712,12 @@ set_localisations() {
     current_user_homedir=$(/usr/libexec/PlistBuddy -c 'Print :dsAttrTypeStandard\:NFSHomeDirectory:0' /dev/stdin <<< "$(/usr/bin/dscl -plist /Search -read "/Users/${current_user}" NFSHomeDirectory)")
     # detect the user's language
     language=$(/usr/libexec/PlistBuddy -c 'print AppleLanguages:0' "/${current_user_homedir}/Library/Preferences/.GlobalPreferences.plist")
+    # set accent colour
+    accent_colour=$(sudo -u $currentUser defaults read -g AppleAccentColor)
+    if [ $? -ne 0 ]; then
+        # nil result, default to blue
+        accentColor=4 
+    fi
     # override language if specified in arguments
     if [[ "$language_override" ]]; then
         writelog "[set_localisations] Overriding language to $language_override"
