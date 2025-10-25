@@ -22,9 +22,11 @@ No date
 
 ### Updates in 40.0
 
-- Fixed an issue where user language is not respected in the password entry field (addresses #563).
+- Allow the use of `--native` mode on older systems if `jq` has been installed. Note: `jq` must be in the path (addresses #561).
 
 ### Bugfixes in 40.0
+
+- Fixed an issue where user language is not respected in the password entry field (addresses #563).
 
 ## [39.1]
 

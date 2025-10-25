@@ -582,7 +582,7 @@ check_newer_available_from_json_file() {
             if [[ "$skip_validation" != "yes" ]]; then
                 writelog "[check_newer_available_from_json_file] Checking that selected version '$prechosen_version' is available and compatible"
                 # check if the prechosen version is in the JSON file and the compatible key is set to True
-                if jq -e ".[] | select(.version == \"$prechosen_version\" and .compatible == \"True\")" "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e ".[] | select(.version == \"$prechosen_version\" and .compatible == \"True\")" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer compatible version found: $prechosen_version"
                     newer_version_found="yes"
                 else
@@ -590,7 +590,7 @@ check_newer_available_from_json_file() {
                 fi
             else
                 writelog "[check_newer_available_from_json_file] Checking that selected version '$prechosen_version' is available"
-                if jq -e ".[] | select(.version == \"$prechosen_version\")" "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e ".[] | select(.version == \"$prechosen_version\")" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer version found: $prechosen_version"
                     newer_version_found="yes"
                 else
@@ -601,7 +601,7 @@ check_newer_available_from_json_file() {
             if [[ "$skip_validation" != "yes" ]]; then
                 writelog "[check_newer_available_from_json_file] Restricting to selected OS '$prechosen_os' and checking compatibility"
                 # use jq to compare the OS Version with the number before the first decimal point of the version string
-                if jq -e ".[] | select(.version | startswith(\"$prechosen_os\") and .compatible == \"True\")" "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e ".[] | select(.version | startswith(\"$prechosen_os\") and .compatible == \"True\")" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer compatible version found for OS '$prechosen_os'"
                     newer_version_found="yes"
                 else
@@ -610,7 +610,7 @@ check_newer_available_from_json_file() {
             else
                 writelog "[check_newer_available_from_json_file] Restricting to selected OS '$prechosen_os'"
                 # use jq to compare the OS Version with the number before the first decimal point of the version string
-                if jq -e ".[] | select(.version | startswith(\"$prechosen_os\"))" "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e ".[] | select(.version | startswith(\"$prechosen_os\"))" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer version found for OS '$prechosen_os'"
                     newer_version_found="yes"
                 else
@@ -621,7 +621,7 @@ check_newer_available_from_json_file() {
             if [[ "$skip_validation" != "yes" ]]; then
                 writelog "[check_newer_available_from_json_file] Restricting to same OS as current system ($system_os)"
                 # use jq to compare the OS Version with the number before the first decimal point of the version string
-                if jq -e ".[] | select(.version | startswith(\"$system_os\") and .compatible == \"True\")" "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e ".[] | select(.version | startswith(\"$system_os\") and .compatible == \"True\")" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer compatible version found for OS '$system_os'"
                     newer_version_found="yes"
                 else
@@ -630,7 +630,7 @@ check_newer_available_from_json_file() {
             else
                 writelog "[check_newer_available_from_json_file] Restricting to same OS as current system ($system_os_version)"
                 # use jq to compare the OS Version with the number before the first decimal point of the version string
-                if jq -e ".[] | select(.version | startswith(\"$system_os\"))" "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e ".[] | select(.version | startswith(\"$system_os\"))" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer version found for OS '$system_os'"
                     newer_version_found="yes"
                 else
@@ -641,7 +641,7 @@ check_newer_available_from_json_file() {
             if [[ "$skip_validation" != "yes" ]]; then
                 writelog "[check_newer_available_from_json_file] No restrictions set, checking all available compatible installers"
                 # use jq to compare the OS Version with the number before the first decimal point of the version string
-                if jq -e '.[] | select(.version and .compatible == "True")' "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e '.[] | select(.version and .compatible == "True")' "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer compatible version found"
                     newer_version_found="yes"
                 else
@@ -650,7 +650,7 @@ check_newer_available_from_json_file() {
             else
                 writelog "[check_newer_available_from_json_file] No restrictions set, checking all available installers"
                 # use jq to compare the OS Version with the number before the first decimal point of the version string
-                if jq -e ".[] | select(.version)" "$installers_list_json_file" > /dev/null; then
+                if "$jq_bin" -e ".[] | select(.version)" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer version found"
                     newer_version_found="yes"
                 else
@@ -1508,11 +1508,11 @@ get_installers_list_json() {
             # now convert to json
             package_json=$(echo "$package_plist" | plutil -convert json -o - - 2>/dev/null)
             # extract the URL key that ends with InstallAssistant.pkg
-            ia_url=$(jq -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.URL // empty' <<< "$package_json" 2>/dev/null)
+            ia_url=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.URL // empty' <<< "$package_json" 2>/dev/null)
             if [[ -n "$ia_url" ]]; then
                 ia_post_date=$(plutil -extract Products."$ia_product".PostDate raw -o - "$catalog_plist_path" 2>/dev/null)
                 ia_post_date=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ia_post_date" "+%Y-%m-%d" 2>/dev/null)
-                pkg_size_bytes=$(jq -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.Size // empty' <<< "$package_json" 2>/dev/null)
+                pkg_size_bytes=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.Size // empty' <<< "$package_json" 2>/dev/null)
                 # convert size from bytes to GB
                 if [[ "$pkg_size_bytes" == "empty" || -z "$pkg_size_bytes" || ! "$pkg_size_bytes" =~ ^[0-9]+$ ]]; then
                     ia_pkg_size="0.00"
@@ -1544,7 +1544,7 @@ get_installers_list_json() {
                     ia_compatible="False"
                 fi
 
-                jq -n \
+                "$jq_bin" -n \
                   --arg product "$ia_product" \
                   --arg post_date "$ia_post_date" \
                   --arg url "$ia_url" \
@@ -1553,8 +1553,8 @@ get_installers_list_json() {
                   --arg version "$ia_version" \
                   --arg pkg_size "$ia_pkg_size" \
                   --arg compatible "$ia_compatible" \
-                  --argjson supported_board_ids "$(echo "$ia_supportedBoardIDs" | jq -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
-                  --argjson supported_device_ids "$(echo "$ia_supportedDeviceIDs" | jq -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
+                  --argjson supported_board_ids "$(echo "$ia_supportedBoardIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
+                  --argjson supported_device_ids "$(echo "$ia_supportedDeviceIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
                   '{
                     product: $product,
                     post_date: $post_date,
@@ -1574,7 +1574,7 @@ get_installers_list_json() {
         if [[ ! "$tmp_json_file" =~ {.*} ]]; then
             writelog "[get_installers_list_json] Combining JSON objects into a valid JSON array..."
             # combine all JSON objects into a valid JSON array
-            jq -s '[.[] | select(type == "object")]' "$tmp_json_file" > "$installers_list_json_file"
+            "$jq_bin" -s '[.[] | select(type == "object")]' "$tmp_json_file" > "$installers_list_json_file"
             writelog "[get_installers_list_json] JSON file created at $installers_list_json_file"
         else
             writelog "[get_installers_list_json] No valid products found in the catalog."
@@ -1628,7 +1628,7 @@ list_installers_from_json() {
     echo "├────────────┼──────────────────┼─────────┼──────────┼──────────┼────────────┼────────────┤"
 
     if [[ "$beta" == "yes" ]]; then
-        jq -r 'sort_by(.version | split(".") | map(tonumber)) | reverse | .[] | [
+        "$jq_bin" -r 'sort_by(.version | split(".") | map(tonumber)) | reverse | .[] | [
             (.product // ""),
             (.title // ""),
             (.version // ""),
@@ -1641,7 +1641,7 @@ list_installers_from_json() {
                 "$ia_product" "$ia_title" "$ia_version" "$ia_build" "$ia_size" "$ia_date" "$ia_compatible"
         done
     else
-        jq -r 'sort_by(.version | split(".") | map(tonumber)) | reverse | .[] | select((.title // "" | test("beta"; "i")) | not) | [
+        "$jq_bin" -r 'sort_by(.version | split(".") | map(tonumber)) | reverse | .[] | select((.title // "" | test("beta"; "i")) | not) | [
             (.product // ""),
             (.title // ""),
             (.version // ""),
@@ -2275,12 +2275,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest compatible InstallAssistant.pkg for version $prechosen_version"
             # check that this version is available in the list and is compatible with the system
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.version == \"$prechosen_version\") | select(.compatible == \"True\")" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version == \"$prechosen_version\") | select(.compatible == \"True\")" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.version == \"$prechosen_version\") | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version == \"$prechosen_version\") | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: $prechosen_version not found in $installers_list_json_file or is not compatible with this system"
                 exit 1
@@ -2290,12 +2290,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest InstallAssistant.pkg for version $prechosen_version"
             # check that this version is available in the list
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.version == \"$prechosen_version\")" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version == \"$prechosen_version\")" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.version == \"$prechosen_version\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version == \"$prechosen_version\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: $prechosen_version not found in $installers_list_json_file"
                 exit 1
@@ -2307,12 +2307,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest compatible InstallAssistant.pkg for macOS $prechosen_os"
             # check that this OS is available in the list based on the number before the first decimal point of the version, and is compatible with the system
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e "[.[] | select(.version | startswith(\"$prechosen_os.\")) | select(.compatible == \"True\")] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "[.[] | select(.version | startswith(\"$prechosen_os.\")) | select(.compatible == \"True\")] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e "[.[] | select(.version | startswith(\"$prechosen_os.\")) | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "[.[] | select(.version | startswith(\"$prechosen_os.\")) | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: No compatible version for macOS $prechosen_os found in $installers_list_json_file"
                 exit 1
@@ -2322,12 +2322,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest InstallAssistant.pkg for macOS $prechosen_os"
             # check that this OS is available in the list based on the number before the first decimal point of the version
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e "[.[] | select(.version | startswith(\"$prechosen_os.\"))] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "[.[] | select(.version | startswith(\"$prechosen_os.\"))] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e "[.[] | select(.version | startswith(\"$prechosen_os.\")) | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "[.[] | select(.version | startswith(\"$prechosen_os.\")) | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: No version for macOS $prechosen_os found in $installers_list_json_file"
                 exit 1
@@ -2339,12 +2339,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest compatible InstallAssistant.pkg for current system OS $system_os"
             # check that the current system OS is available in the list and is compatible with the system
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.version | startswith(\"$system_os.\")) | select(.compatible == \"True\")" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version | startswith(\"$system_os.\")) | select(.compatible == \"True\")" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.version | startswith(\"$system_os.\")) | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version | startswith(\"$system_os.\")) | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: Current system OS $system_os not found in $installers_list_json_file or is not compatible with this system"
                 exit 1
@@ -2354,12 +2354,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest InstallAssistant.pkg for current system OS $system_os"
             # check that the current system OS is available in the list
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.version | startswith(\"$system_os.\"))" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version | startswith(\"$system_os.\"))" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.version | startswith(\"$system_os.\")) | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.version | startswith(\"$system_os.\")) | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: Current system OS $system_os not found in $installers_list_json_file"
                 exit 1
@@ -2371,12 +2371,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest compatible InstallAssistant.pkg for build $prechosen_build"
             # check that this build is available in the list and is compatible with the system
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.build == \"$prechosen_build\") | select(.compatible == \"True\")" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$prechosen_build\") | select(.compatible == \"True\")" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.build == \"$prechosen_build\") | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$prechosen_build\") | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: $prechosen_build not found in $installers_list_json_file or is not compatible with this system"
                 exit 1
@@ -2386,12 +2386,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest InstallAssistant.pkg for build $prechosen_build"
             # check that this build is available in the list
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.build == \"$prechosen_build\")" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$prechosen_build\")" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.build == \"$prechosen_build\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$prechosen_build\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: $prechosen_build not found in $installers_list_json_file"
                 exit 1
@@ -2403,12 +2403,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest compatible InstallAssistant.pkg for current system build $system_build"
             # check that the current system version is available in the list and is compatible with the system
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.build == \"$system_build\") | select(.compatible == \"True\")" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$system_build\") | select(.compatible == \"True\")" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.build == \"$system_build\") | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$system_build\") | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: Current system build $system_build not found in $installers_list_json_file or is not compatible with this system"
                 exit 1
@@ -2418,12 +2418,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] Checking for the latest InstallAssistant.pkg for current system build $system_build"
             # check that the current system version is available in the list
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e ".[] | select(.build == \"$system_build\")" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$system_build\")" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e ".[] | select(.build == \"$system_build\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e ".[] | select(.build == \"$system_build\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: Current system build $system_build not found in $installers_list_json_file"
                 exit 1
@@ -2435,12 +2435,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] No version or OS selected, obtaining the latest compatible InstallAssistant.pkg"
             # get the latest compatible installer
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e "[.[] | select(.compatible == \"True\")] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "[.[] | select(.compatible == \"True\")] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e "[.[] | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "[.[] | select(.compatible == \"True\") | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: No compatible version found in $installers_list_json_file"
                 exit 1
@@ -2450,12 +2450,12 @@ download_install_assistant_pkg() {
             writelog "[download_install_assistant_pkg] No version or OS selected, obtaining the latest version"
             # get the latest installer
             if [[ "$beta" == "yes" ]]; then
-                latest_installer=$(jq -e "sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             else
-                latest_installer=$(jq -e "[.[] | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
+                latest_installer=$("$jq_bin" -e "[.[] | select((.title // \"\") | test(\"beta\"; \"i\") | not)] | sort_by(.version | split(\".\") | map(tonumber)) | last" "$installers_list_json_file")
             fi
             # get the installer URL
-            installer_url=$(jq -r ".url" <<< "$latest_installer")
+            installer_url=$("$jq_bin" -r ".url" <<< "$latest_installer")
             if [[ $installer_url == null ]]; then
                 writelog "[download_install_assistant_pkg] ERROR: No version found in $installers_list_json_file"
                 exit 1
@@ -2467,8 +2467,8 @@ download_install_assistant_pkg() {
     # now download the installer
     writelog "[download_install_assistant_pkg] Downloading InstallAssistant.pkg from $installer_url"
     # get the version and build from $latest_installer
-    ia_version=$(jq -r ".version" <<< "$latest_installer")
-    ia_build=$(jq -r ".build" <<< "$latest_installer")
+    ia_version=$("$jq_bin" -r ".version" <<< "$latest_installer")
+    ia_build=$("$jq_bin" -r ".build" <<< "$latest_installer")
     trap 'rm -f "$tmpcurlfile"' EXIT
     writelog "[download_install_assistant_pkg] tmpcurlfile created at $tmpcurlfile" # debug
     # download the installer
@@ -3738,7 +3738,10 @@ fi
 if [[ $native == "yes" ]]; then
     tmpcurlfile=$(mktemp -t InstallAssistantDownload.XXXXXX)
     # bail if jq is not installed and --native mode is selected
-    if ! is-at-least "15" "$system_version" && ! command -v jq &> /dev/null; then
+    if command -v jq &> /dev/null; then
+        writelog "[$script_name] jq is installed, proceeding with --native mode."
+        jq_bin=$(command -v jq)
+    else
         writelog "[$script_name] This script requires macOS 15 or jq to be installed or newer for native download."
         echo
         exit 1
