@@ -27,6 +27,7 @@ No date
 ### Bugfixes in 40.0
 
 - Fixed an issue where user language is not respected in the password entry field (addresses #563).
+- The `extras` folder can now be properly overridden (addresses #547).
 
 ## [39.1]
 

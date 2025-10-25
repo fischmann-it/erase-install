@@ -3373,6 +3373,10 @@ max_password_attempts=5
 preinstall_command=()
 postinstall_command=()
 
+# place any extra packages that should be installed as part of the erase-install into this folder. The script will find them and install.
+# https://derflounder.wordpress.com/2017/09/26/using-the-macos-high-sierra-os-installers-startosinstall-tool-to-install-additional-packages-as-post-upgrade-tasks/
+extras_directory="$workdir/extras"
+
 # print out all the arguments
 all_args="$*"
 
@@ -3823,10 +3827,6 @@ fi
 # ensure computer does not go to sleep while running this script
 writelog "[$script_name] Caffeinating this script (pid=$$)"
 /usr/bin/caffeinate -dimsu -w $$ &
-
-# place any extra packages that should be installed as part of the erase-install into this folder. The script will find them and install.
-# https://derflounder.wordpress.com/2017/09/26/using-the-macos-high-sierra-os-installers-startosinstall-tool-to-install-additional-packages-as-post-upgrade-tasks/
-extras_directory="$workdir/extras"
 
 # set dynamic dialog titles
 if [[ $erase == "yes" ]]; then
