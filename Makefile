@@ -56,6 +56,22 @@ build:
 	echo "## Downloaded mist-cli $$mist_tag"
 
 	@echo
+	echo "## Downloading jq arm64" ;\
+	github_token=$$(cat $(GITHUB_TOKEN_FILE)) ;\
+	jq_api_url="https://api.github.com/repos/jqlang/jq/releases/latest" ;\
+    jq_url=$$(/usr/bin/curl -sL -H "Accept: application/json" "$$jq_api_url" --header "Authorization: Bearer $$github_token" --header "X-GitHub-Api-Version: 2022-11-28" | /usr/bin/jq -r '.assets[] | select(.name == "jq-macos-arm64") | .browser_download_url') ;\
+	curl -L "$$jq_url" -o "$(PKG_SCRIPTS)/jq-arm64" ;\
+	echo "## Downloaded jq (arm64)"
+
+	@echo
+	echo "## Downloading jq amd64" ;\
+	github_token=$$(cat $(GITHUB_TOKEN_FILE)) ;\
+	jq_api_url="https://api.github.com/repos/jqlang/jq/releases/latest" ;\
+    jq_url=$$(/usr/bin/curl -sL -H "Accept: application/json" "$$jq_api_url" --header "Authorization: Bearer $$github_token" --header "X-GitHub-Api-Version: 2022-11-28" | /usr/bin/jq -r '.assets[] | select(.name == "jq-macos-amd64") | .browser_download_url') ;\
+	curl -L "$$jq_url" -o "$(PKG_SCRIPTS)/jq-amd64" ;\
+	echo "## Downloaded jq (amd64)"
+
+	@echo
 	@echo "## Making package in '$(PKG_ROOT)' directory"
 	pkgbuild --analyze --root "$(PKG_ROOT)" "$(PKG_BUILD)/erase-install-component.plist"
 	/usr/libexec/PlistBuddy -c 'Set :0:BundleIsRelocatable boolean false' "$(PKG_BUILD)/erase-install-component.plist"
@@ -68,4 +84,5 @@ clean :
 	rm -Rf "$(PKG_ROOT)/Library/Management/erase-install/"* ||:
 	rm $(CURDIR)/pkg/erase-install/build/*.pkg ||:
 	rm -Rf $(CURDIR)/pkg/erase-install/scripts/*.pkg ||:
+	rm $(CURDIR)/pkg/erase-install/scripts/jq* ||:
 	rm -Rf $(CURDIR)/pkg/erase-install/payload ||:

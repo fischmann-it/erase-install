@@ -22,7 +22,9 @@ No date
 
 ### Updates in 40.0
 
-- Allow the use of `--native` mode on older systems if `jq` has been installed. Note: `jq` must be in the path (addresses #561).
+- Improved the speed of downloading dist files in `--native` mode by parallelising the downloads.
+- `jq` will now be installed on macOS 14 or lower if not already present, allowing use of `--native` mode on all devices. The appropriate version of `jq` for Intel or Apple Silicon is installed.
+- Allow the use of `--native` mode on older systems if `jq` is present. Note: `jq` must be in the path (addresses #561).
 
 ### Bugfixes in 40.0
 

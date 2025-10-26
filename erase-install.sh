@@ -39,7 +39,7 @@ script_name="erase-install"
 pkg_label="com.github.grahampugh.erase-install"
 
 # Version of this script
-version="39.1"
+version="40.0"
 
 # Directory in which to place the macOS installer. Overridden with --path
 installer_directory="/Applications"
@@ -1447,6 +1447,87 @@ get_device_id() {
 }
 
 # -----------------------------------------------------------------------------
+# Process a single product from the catalog in an asynchronous manner.
+# This function is intended to be run in the background for each product.
+# -----------------------------------------------------------------------------
+process_product_async() {
+    local ia_product="$1"
+    local tmp_json_file="$2"
+    local product_tmp_file="$workdir/downloads/product_${ia_product}.json"
+    
+    # Process package extraction (same as before)
+    package_plist=$(plutil -extract Products."$ia_product".Packages xml1 -o - "$catalog_plist_path" 2>/dev/null)
+    package_json=$(echo "$package_plist" | plutil -convert json -o - - 2>/dev/null)
+    ia_url=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.URL // empty' <<< "$package_json" 2>/dev/null)
+    
+    if [[ -n "$ia_url" ]]; then
+        # Get basic info without downloading dist file yet
+        ia_post_date=$(plutil -extract Products."$ia_product".PostDate raw -o - "$catalog_plist_path" 2>/dev/null)
+        ia_post_date=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ia_post_date" "+%Y-%m-%d" 2>/dev/null)
+        pkg_size_bytes=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.Size // empty' <<< "$package_json" 2>/dev/null)
+        
+        if [[ "$pkg_size_bytes" == "empty" || -z "$pkg_size_bytes" || ! "$pkg_size_bytes" =~ ^[0-9]+$ ]]; then
+            ia_pkg_size="0.00"
+        else
+            ia_pkg_size=$(bc <<< "scale=2; $pkg_size_bytes / 1024 / 1024 / 1024")
+        fi
+        
+        dist_file=$(plutil -extract Products."$ia_product".Distributions.English raw -o - "$catalog_plist_path" 2>/dev/null)
+        if [[ "$dist_file" ]]; then
+            dist_xml="$workdir/downloads/$(basename "$dist_file").xml"
+            
+            # Download dist file if needed
+            if [[ ! -f "$dist_xml" || $(date -r "$dist_xml" +%Y-%m-%d) != $(date +%Y-%m-%d) ]]; then
+                curl -sL "$dist_file" -o "$dist_xml" 2>/dev/null
+            fi
+            
+            if [[ -f "$dist_xml" ]]; then
+                # Extract info from XML in one pass using multiple xpath calls
+                ia_title=$(xmllint --xpath 'string(/installer-gui-script/title/text())' "$dist_xml" 2>/dev/null)
+                ia_build=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='BUILD']/text())" "$dist_xml" 2>/dev/null)
+                ia_version=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='VERSION']/text())" "$dist_xml" 2>/dev/null)
+                
+                # Extract supported IDs more efficiently
+                ia_supportedBoardIDs=$(awk '/var supportedBoardIDs/ {gsub(/.*\[\s*|\s*\].*/, ""); gsub(/['"'"']/, ""); print}' "$dist_xml" 2>/dev/null)
+                ia_supportedDeviceIDs=$(awk '/var supportedDeviceIDs/ {gsub(/.*\[\s*|\s*\].*/, ""); gsub(/['"'"']/, ""); print}' "$dist_xml" 2>/dev/null)
+                
+                # Check compatibility
+                if [[ ($device_id && "$ia_supportedDeviceIDs" == *"$device_id"*) || ($board_id && "$ia_supportedBoardIDs" == *"$board_id"*) ]]; then
+                    ia_compatible="True"
+                else
+                    ia_compatible="False"
+                fi
+                
+                # Write to individual product file (thread-safe)
+                "$jq_bin" -n \
+                  --arg product "$ia_product" \
+                  --arg post_date "$ia_post_date" \
+                  --arg url "$ia_url" \
+                  --arg title "$ia_title" \
+                  --arg build "$ia_build" \
+                  --arg version "$ia_version" \
+                  --arg pkg_size "$ia_pkg_size" \
+                  --arg compatible "$ia_compatible" \
+                  --argjson supported_board_ids "$(echo "$ia_supportedBoardIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
+                  --argjson supported_device_ids "$(echo "$ia_supportedDeviceIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
+                  '{
+                    product: $product,
+                    post_date: $post_date,
+                    url: $url,
+                    title: $title,
+                    build: $build,
+                    version: $version,
+                    pkg_size: $pkg_size,
+                    compatible: $compatible,
+                    supported_board_ids: $supported_board_ids,
+                    supported_device_ids: $supported_device_ids
+                  }' > "$product_tmp_file"
+            fi
+        fi
+    fi
+}
+
+# -----------------------------------------------------------------------------
 # Get the list of products from the catalog and create a JSON file with the
 # product information.
 # The JSON file will contain the product identifier, post date, URL, title,
@@ -1463,7 +1544,10 @@ get_installers_list_json() {
     fi
     if [[ ! -f "$catalog_plist_path" || $(date -r "$catalog_plist_path" +%Y-%m-%d) != $(date +%Y-%m-%d) ]]; then
         # clear old json file
-        rm "$installers_list_json_file"
+        if [[ -f "$installers_list_json_file" ]]; then
+            writelog "[get_installers_list_json] Removing old JSON file..."
+            rm "$installers_list_json_file"
+        fi
         writelog "[get_installers_list_json] Downloading catalog..."
         if ! curl -sL "$catalogurl" -o "$catalog_download_path"; then
             writelog "[get_installers_list_json] Failed to download catalog"
@@ -1502,79 +1586,31 @@ get_installers_list_json() {
         echo > "$tmp_json_file"
         get_device_id
 
+        # Process products in parallel with limited concurrent downloads
+        max_concurrent=8
+        current_jobs=0
+        
         while read -r ia_product; do
-            # some tests failed to extract the data directly as json, so extract as xml1 first and then convert
-            package_plist=$(plutil -extract Products."$ia_product".Packages xml1 -o - "$catalog_plist_path" 2>/dev/null)
-            # now convert to json
-            package_json=$(echo "$package_plist" | plutil -convert json -o - - 2>/dev/null)
-            # extract the URL key that ends with InstallAssistant.pkg
-            ia_url=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.URL // empty' <<< "$package_json" 2>/dev/null)
-            if [[ -n "$ia_url" ]]; then
-                ia_post_date=$(plutil -extract Products."$ia_product".PostDate raw -o - "$catalog_plist_path" 2>/dev/null)
-                ia_post_date=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ia_post_date" "+%Y-%m-%d" 2>/dev/null)
-                pkg_size_bytes=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.Size // empty' <<< "$package_json" 2>/dev/null)
-                # convert size from bytes to GB
-                if [[ "$pkg_size_bytes" == "empty" || -z "$pkg_size_bytes" || ! "$pkg_size_bytes" =~ ^[0-9]+$ ]]; then
-                    ia_pkg_size="0.00"
-                else
-                    ia_pkg_size=$(bc <<< "scale=2; $pkg_size_bytes / 1024 / 1024 / 1024")
-                fi
-                dist_file=$(plutil -extract Products."$ia_product".Distributions.English raw -o - "$catalog_plist_path" 2>/dev/null)
-                if [[ ! "$dist_file" ]]; then
-                    echo "No dist file found for product $ia_product."
-                        exit 1
-                fi
-                dist_xml="$workdir/downloads/$(basename "$dist_file").xml"
-                if [[ ! -f "$dist_xml" || $(date -r "$dist_xml" +%Y-%m-%d) != $(date +%Y-%m-%d) ]]; then
-                    writelog "[get_installers_list_json] Downloading dist file for $ia_product..."
-                    if ! curl -sL "$dist_file" -o "$dist_xml"; then
-                        writelog "[get_installers_list_json] Failed to download dist file for $ia_product"
-                        exit 1
-                    fi
-                fi
-                ia_title=$(xmllint --xpath 'string(/installer-gui-script/title/text())' "$dist_xml" 2>/dev/null)
-                ia_build=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='BUILD']/text())" "$dist_xml" 2>/dev/null)
-                ia_version=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='VERSION']/text())" "$dist_xml" 2>/dev/null)
-                ia_supportedBoardIDs=$(grep "var supportedBoardIDs" "$dist_xml" 2>/dev/null | sed -E 's/.*\[\s*([^]]+)\].*/\1/' | tr -d "'")
-                ia_supportedDeviceIDs=$(grep "var supportedDeviceIDs" "$dist_xml" 2>/dev/null | sed -E 's/.*\[\s*([^]]+)\].*/\1/' | tr -d "'")
-                # check if the current device's device ID or board ID is in the supported list
-                if [[ ($device_id && "$ia_supportedDeviceIDs" == *"$device_id"*) || ($board_id && "$ia_supportedBoardIDs" == *"$board_id"*) ]]; then
-                    ia_compatible="True"
-                else
-                    ia_compatible="False"
-                fi
-
-                "$jq_bin" -n \
-                  --arg product "$ia_product" \
-                  --arg post_date "$ia_post_date" \
-                  --arg url "$ia_url" \
-                  --arg title "$ia_title" \
-                  --arg build "$ia_build" \
-                  --arg version "$ia_version" \
-                  --arg pkg_size "$ia_pkg_size" \
-                  --arg compatible "$ia_compatible" \
-                  --argjson supported_board_ids "$(echo "$ia_supportedBoardIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
-                  --argjson supported_device_ids "$(echo "$ia_supportedDeviceIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
-                  '{
-                    product: $product,
-                    post_date: $post_date,
-                    url: $url,
-                    title: $title,
-                    build: $build,
-                    version: $version,
-                    pkg_size: $pkg_size,
-                    compatible: $compatible,
-                    supported_board_ids: $supported_board_ids,
-                    supported_device_ids: $supported_device_ids
-                  }' >> "$tmp_json_file"
-            fi
+            # Limit concurrent background jobs
+            while (( current_jobs >= max_concurrent )); do
+                sleep 0.1
+                current_jobs=$(jobs -r | wc -l)
+            done
+            
+            # Process each product in background
+            process_product_async "$ia_product" "$tmp_json_file" &
+            ((current_jobs++))
         done <<< "$products"
+        
+        # Wait for all background jobs to complete
+        wait
 
-        # Combine all JSON objects into a valid JSON array, sorted by the number before the decimal point of the version, followed by the product ID, with highest first
-        if [[ ! "$tmp_json_file" =~ {.*} ]]; then
+        # Combine all individual product JSON files into final array
+        if ls "$workdir/downloads/product_"*.json 1> /dev/null 2>&1; then
             writelog "[get_installers_list_json] Combining JSON objects into a valid JSON array..."
-            # combine all JSON objects into a valid JSON array
-            "$jq_bin" -s '[.[] | select(type == "object")]' "$tmp_json_file" > "$installers_list_json_file"
+            "$jq_bin" -s '[.[] | select(type == "object")]' "$workdir/downloads/product_"*.json > "$installers_list_json_file"
+            # Clean up individual product files
+            rm "$workdir/downloads/product_"*.json 2>/dev/null
             writelog "[get_installers_list_json] JSON file created at $installers_list_json_file"
         else
             writelog "[get_installers_list_json] No valid products found in the catalog."
@@ -2713,10 +2749,10 @@ set_localisations() {
     # detect the user's language
     language=$(/usr/libexec/PlistBuddy -c 'print AppleLanguages:0' "/${current_user_homedir}/Library/Preferences/.GlobalPreferences.plist")
     # set accent colour
-    accent_colour=$(sudo -u $currentUser defaults read -g AppleAccentColor)
+    accent_colour=$(/usr/bin/sudo -u "$current_user" /usr/bin/defaults read -g AppleAccentColor 2>/dev/null)
     if [ $? -ne 0 ]; then
         # nil result, default to blue
-        accentColor=4 
+        accent_colour=4 
     fi
     # override language if specified in arguments
     if [[ "$language_override" ]]; then
@@ -3110,12 +3146,12 @@ show_help() {
 
     Advanced options:
 
+    --native            Use the native download option to download installers. This is the default method.
+    --mist              Use mist-cli to download installers. Note that this is faster than the native method
+                        but currently does not determine compatibility of forked OS installers.
     --fetch-full-installer | --ffi | -f
                         Obtain the installer using 'softwareupdate --fetch-full-installer' method instead of
                         using mist-cli. 
-    --native            Use the native download option instead of using mist-cli or fetch-full-installer.
-    --mist              Use mist-cli to download installers. This is the default method. 
-                        May cause failure to download installers.
     --clear-cache-only  When used in conjunction with --overwrite, --update or --replace-invalid,
                         the existing installer is removed but not replaced. This is useful
                         for running the script after an upgrade to clear the working files.
@@ -3361,6 +3397,11 @@ trap "post_prep_work" SIGUSR1
 erase="no"
 reinstall="no"
 
+# set default mode to "native"
+native="yes"
+mist="no"
+ffi="no"
+
 # default minimum drive space in GB
 # Note that the amount of space required varies between macOS installer and system versions.
 # Override this default value with the --min-drive-space option.
@@ -3407,13 +3448,20 @@ while test $# -gt 0 ; do
             ;;
         --preservecontainer) preservecontainer="yes"
             ;;
-        -f|--ffi|--fetch-full-installer) ffi="yes"
+        -f|--ffi|--fetch-full-installer) 
+            ffi="yes"
+            mist="no"
+            native="no"
             ;;
         -n|--native) 
             native="yes"
+            mist="no"
+            ffi="no"
             ;;
         --mist)
             mist="yes"
+            native="no"
+            ffi="no"
             ;;
         -l|--list) list="yes"
             ;;
@@ -3731,14 +3779,6 @@ if [[ ! $silent ]]; then
     check_for_swiftdialog_app
 fi
 
-# set to native mode if running macOS 15.6 or newer
-# if is-at-least "15.6" "$system_version"; then
-#     if [[ "$ffi" != "yes" && "$mist" != "yes" ]]; then
-#         writelog "Setting to --native mode to prevent failures with mist-cli on macOS 15.6 and newer"
-#         native="yes"
-#     fi
-# fi
-
 if [[ $native == "yes" ]]; then
     tmpcurlfile=$(mktemp -t InstallAssistantDownload.XXXXXX)
     # bail if jq is not installed and --native mode is selected
@@ -3746,7 +3786,7 @@ if [[ $native == "yes" ]]; then
         writelog "[$script_name] jq is installed, proceeding with --native mode."
         jq_bin=$(command -v jq)
     else
-        writelog "[$script_name] This script requires macOS 15 or jq to be installed or newer for native download."
+        writelog "[$script_name] This script requires macOS 15 or jq to be installed or newer for native download. Install jq or use --mist or --fetch-full-installer options."
         echo
         exit 1
     fi
@@ -3791,7 +3831,7 @@ if ! is-at-least "13" "$system_version"; then
 fi
 
 # /Applications is the only path for fetch-full-installer
-if [[ $ffi ]]; then
+if [[ $ffi == "yes" ]]; then
     installer_directory="/Applications"
 fi
 
@@ -3803,7 +3843,7 @@ fi
 
 # if getting a list from softwareupdate then we don't need to make any OS checks
 if [[ $list == "yes" ]]; then
-    if [[ $ffi ]]; then
+    if [[ $ffi == "yes" ]]; then
         if [[ -f "$workdir/ffi-list-full-installers.txt" ]]; then 
             rm "$workdir/ffi-list-full-installers.txt"
         fi
@@ -3895,9 +3935,9 @@ if [[ $update_installer == "yes" && "$installer_build" && $do_overwrite_existing
     if [[ -d "$working_macos_app" || -f "$working_installer_pkg" ]]; then
         writelog "[$script_name] Checking for newer installer"
         # check_newer_available
-        if [[ $ffi ]]; then
+        if [[ $ffi == "yes" ]]; then
             check_newer_available_from_ffi
-        elif [[ $native ]]; then
+        elif [[ $native == "yes" ]]; then
             check_newer_available_from_json_file
         else
             # mist-cli
@@ -3978,18 +4018,18 @@ if [[ ! -d "$working_macos_app" && ! -f "$working_installer_pkg" ]]; then
             "$dialog_bin" "${dialog_args[@]}" 2>/dev/null & sleep 0.1
         fi
 
-        if [[ $ffi ]]; then
+        if [[ $ffi == "yes" ]]; then
             dialog_progress fetch-full-installer >/dev/null 2>&1 &
-        elif [[ $native ]]; then
+        elif [[ $native == "yes" ]]; then
             dialog_progress native >/dev/null 2>&1 &
         else
             dialog_progress mist >/dev/null 2>&1 &
         fi
     fi
     # now run mist or softwareupdate to download the installer, showing progress
-    if [[ $ffi ]]; then
+    if [[ $ffi == "yes" ]]; then
         run_fetch_full_installer
-    elif [[ $native ]]; then
+    elif [[ $native == "yes" ]]; then
         download_install_assistant_pkg
     else
         run_mist
