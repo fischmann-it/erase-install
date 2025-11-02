@@ -12,6 +12,12 @@ Since the package on this site is not signed, if you download this package from 
 2. Install from the command line, e.g. `sudo installer -tgt / -pkg /path/to/erase-install-36.0.pkg`
 3. Remove the quarantine bit, e.g. `xattr -d com.apple.quarantine /path/to/erase-install-36.0.pkg`
 
+## Note about release versioning
+
+I've decided that pre-release tags and release versions should have incremental numbers, rather than removing and recreating the same tag and release. This should make it easier for people testing out beta versions to know what they are running. This means that from now on, the latest "full" release is likely to not be a .0 release, but whichever beta I decide is ready for production. I'll also therefore always increment the "major" version number for any new release (not based on an arbitrary decision about what is major or minor).
+
+I have deleted previous beta releases that don't make it to be a latest release. I've also removed all previous full releases, other than v27.3, to tidy things up.
+
 ## [Untagged]
 
 No date
