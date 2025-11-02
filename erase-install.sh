@@ -1447,6 +1447,34 @@ get_device_id() {
 }
 
 # -----------------------------------------------------------------------------
+# Check status of background jobs and log details for debugging
+# -----------------------------------------------------------------------------
+check_job_status() {
+    local job_tracker="$workdir/downloads/job_tracker.tmp"
+    local current_time=$(date +%s)
+    local stuck_threshold=60  # Consider jobs stuck after 60 seconds
+    
+    if [[ -f "$job_tracker" ]]; then
+        while IFS=':' read -r pid product start_time; do
+            if [[ -n "$pid" && -n "$product" && -n "$start_time" ]]; then
+                local elapsed=$((current_time - start_time))
+                if kill -0 "$pid" 2>/dev/null; then
+                    if (( elapsed > stuck_threshold )); then
+                        writelog "[check_job_status] WARNING: Job for product $product (PID $pid) has been running for ${elapsed}s"
+                        # Check if there's a log file for this job
+                        if [[ -f "$workdir/downloads/product_${product}.log" ]]; then
+                            writelog "[check_job_status] Last log entry for $product: $(tail -1 "$workdir/downloads/product_${product}.log")"
+                        fi
+                    fi
+                else
+                    writelog "[check_job_status] Job for product $product (PID $pid) has finished"
+                fi
+            fi
+        done < "$job_tracker"
+    fi
+}
+
+# -----------------------------------------------------------------------------
 # Process a single product from the catalog in an asynchronous manner.
 # This function is intended to be run in the background for each product.
 # -----------------------------------------------------------------------------
@@ -1454,77 +1482,153 @@ process_product_async() {
     local ia_product="$1"
     local tmp_json_file="$2"
     local product_tmp_file="$workdir/downloads/product_${ia_product}.json"
+    local start_time
+    start_time=$(date +%s)
     
-    # Process package extraction (same as before)
-    package_plist=$(plutil -extract Products."$ia_product".Packages xml1 -o - "$catalog_plist_path" 2>/dev/null)
-    package_json=$(echo "$package_plist" | plutil -convert json -o - - 2>/dev/null)
-    ia_url=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.URL // empty' <<< "$package_json" 2>/dev/null)
-    
-    if [[ -n "$ia_url" ]]; then
-        # Get basic info without downloading dist file yet
-        ia_post_date=$(plutil -extract Products."$ia_product".PostDate raw -o - "$catalog_plist_path" 2>/dev/null)
-        ia_post_date=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ia_post_date" "+%Y-%m-%d" 2>/dev/null)
-        pkg_size_bytes=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.Size // empty' <<< "$package_json" 2>/dev/null)
+    # Add error handling and timeout
+    {
+        # Redirect stdout and stderr to per-job log file
+        exec 1>"$workdir/downloads/product_${ia_product}.log" 2>&1
         
-        if [[ "$pkg_size_bytes" == "empty" || -z "$pkg_size_bytes" || ! "$pkg_size_bytes" =~ ^[0-9]+$ ]]; then
-            ia_pkg_size="0.00"
-        else
-            ia_pkg_size=$(bc <<< "scale=2; $pkg_size_bytes / 1024 / 1024 / 1024")
+        writelog "[process_product_async] Starting processing product $ia_product (PID: $$)"
+        
+        # Process package extraction with error checking
+        if ! package_plist=$(plutil -extract Products."$ia_product".Packages xml1 -o - "$catalog_plist_path" 2>/dev/null); then
+            writelog "[process_product_async] ERROR: Failed to extract packages for product $ia_product"
+            return 1
         fi
         
-        dist_file=$(plutil -extract Products."$ia_product".Distributions.English raw -o - "$catalog_plist_path" 2>/dev/null)
-        if [[ "$dist_file" ]]; then
-            dist_xml="$workdir/downloads/$(basename "$dist_file").xml"
-            
-            # Download dist file if needed
-            if [[ ! -f "$dist_xml" || $(date -r "$dist_xml" +%Y-%m-%d) != $(date +%Y-%m-%d) ]]; then
-                curl -sL "$dist_file" -o "$dist_xml" 2>/dev/null
+        if ! package_json=$(echo "$package_plist" | plutil -convert json -o - - 2>/dev/null); then
+            writelog "[process_product_async] ERROR: Failed to convert plist to JSON for product $ia_product"
+            return 1
+        fi
+        
+        if ! ia_url=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.URL // empty' <<< "$package_json" 2>/dev/null); then
+            writelog "[process_product_async] ERROR: Failed to extract URL for product $ia_product"
+            return 1
+        fi
+        
+        if [[ -n "$ia_url" ]]; then
+            # Get basic info without downloading dist file yet
+            ia_post_date=$(plutil -extract Products."$ia_product".PostDate raw -o - "$catalog_plist_path" 2>/dev/null)
+            if [[ -n "$ia_post_date" ]]; then
+                ia_post_date=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$ia_post_date" "+%Y-%m-%d" 2>/dev/null)
             fi
             
-            if [[ -f "$dist_xml" ]]; then
-                # Extract info from XML in one pass using multiple xpath calls
-                ia_title=$(xmllint --xpath 'string(/installer-gui-script/title/text())' "$dist_xml" 2>/dev/null)
-                ia_build=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='BUILD']/text())" "$dist_xml" 2>/dev/null)
-                ia_version=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='VERSION']/text())" "$dist_xml" 2>/dev/null)
+            pkg_size_bytes=$("$jq_bin" -r 'to_entries | map(select(.value.URL and (.value.URL | endswith("InstallAssistant.pkg")))) | .[0].value.Size // empty' <<< "$package_json" 2>/dev/null)
+            
+            if [[ "$pkg_size_bytes" == "empty" || -z "$pkg_size_bytes" || ! "$pkg_size_bytes" =~ ^[0-9]+$ ]]; then
+                ia_pkg_size="0.00"
+            else
+                ia_pkg_size=$(bc <<< "scale=2; $pkg_size_bytes / 1024 / 1024 / 1024" 2>/dev/null || echo "0.00")
+            fi
+            
+            dist_file=$(plutil -extract Products."$ia_product".Distributions.English raw -o - "$catalog_plist_path" 2>/dev/null)
+            if [[ "$dist_file" ]]; then
+                dist_xml="$workdir/downloads/$(basename "$dist_file").xml"
                 
-                # Extract supported IDs more efficiently
-                ia_supportedBoardIDs=$(awk '/var supportedBoardIDs/ {gsub(/.*\[\s*|\s*\].*/, ""); gsub(/['"'"']/, ""); print}' "$dist_xml" 2>/dev/null)
-                ia_supportedDeviceIDs=$(awk '/var supportedDeviceIDs/ {gsub(/.*\[\s*|\s*\].*/, ""); gsub(/['"'"']/, ""); print}' "$dist_xml" 2>/dev/null)
-                
-                # Check compatibility
-                if [[ ($device_id && "$ia_supportedDeviceIDs" == *"$device_id"*) || ($board_id && "$ia_supportedBoardIDs" == *"$board_id"*) ]]; then
-                    ia_compatible="True"
-                else
-                    ia_compatible="False"
+                # Download dist file if needed with timeout
+                if [[ ! -f "$dist_xml" || $(date -r "$dist_xml" +%Y-%m-%d) != $(date +%Y-%m-%d) ]]; then
+                    writelog "[process_product_async] Downloading dist file for product $ia_product"
+                    # Use curl's built-in timeout options instead of timeout command (not available on macOS)
+                    if ! curl -sL --connect-timeout 10 --max-time 30 "$dist_file" -o "$dist_xml" 2>/dev/null; then
+                        writelog "[process_product_async] ERROR: Failed to download dist file for product $ia_product"
+                        writelog "[process_product_async] URL: $dist_file"
+                        return 1
+                    fi
                 fi
                 
-                # Write to individual product file (thread-safe)
-                "$jq_bin" -n \
-                  --arg product "$ia_product" \
-                  --arg post_date "$ia_post_date" \
-                  --arg url "$ia_url" \
-                  --arg title "$ia_title" \
-                  --arg build "$ia_build" \
-                  --arg version "$ia_version" \
-                  --arg pkg_size "$ia_pkg_size" \
-                  --arg compatible "$ia_compatible" \
-                  --argjson supported_board_ids "$(echo "$ia_supportedBoardIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
-                  --argjson supported_device_ids "$(echo "$ia_supportedDeviceIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))')" \
-                  '{
-                    product: $product,
-                    post_date: $post_date,
-                    url: $url,
-                    title: $title,
-                    build: $build,
-                    version: $version,
-                    pkg_size: $pkg_size,
-                    compatible: $compatible,
-                    supported_board_ids: $supported_board_ids,
-                    supported_device_ids: $supported_device_ids
-                  }' > "$product_tmp_file"
+                if [[ -f "$dist_xml" ]]; then
+                    # Extract info from XML in one pass using multiple xpath calls
+                    ia_title=$(xmllint --xpath 'string(/installer-gui-script/title/text())' "$dist_xml" 2>/dev/null)
+                    ia_build=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='BUILD']/text())" "$dist_xml" 2>/dev/null)
+                    ia_version=$(xmllint --xpath "string(//dict/string[preceding-sibling::key[1]='VERSION']/text())" "$dist_xml" 2>/dev/null)
+                    
+                    # Extract supported IDs more efficiently
+                    ia_supportedBoardIDs=$(awk '/var supportedBoardIDs/ {gsub(/.*\[\s*|\s*\].*/, ""); gsub(/['"'"']/, ""); print}' "$dist_xml" 2>/dev/null)
+                    ia_supportedDeviceIDs=$(awk '/var supportedDeviceIDs/ {gsub(/.*\[\s*|\s*\].*/, ""); gsub(/['"'"']/, ""); print}' "$dist_xml" 2>/dev/null)
+                    
+                    # Check compatibility
+                    if [[ ($device_id && "$ia_supportedDeviceIDs" == *"$device_id"*) || ($board_id && "$ia_supportedBoardIDs" == *"$board_id"*) ]]; then
+                        ia_compatible="True"
+                    else
+                        ia_compatible="False"
+                    fi
+                    
+                    # Write to individual product file (thread-safe)
+                    # Prepare JSON arrays for board and device IDs with error handling
+                    if [[ -n "$ia_supportedBoardIDs" ]]; then
+                        board_ids_json=$(echo "$ia_supportedBoardIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))' 2>/dev/null) || board_ids_json='[]'
+                    else
+                        board_ids_json='[]'
+                    fi
+                    
+                    if [[ -n "$ia_supportedDeviceIDs" ]]; then
+                        device_ids_json=$(echo "$ia_supportedDeviceIDs" | "$jq_bin" -R 'split(",") | map(ltrimstr(" ") | rtrimstr(" "))' 2>/dev/null) || device_ids_json='[]'
+                    else
+                        device_ids_json='[]'
+                    fi
+                    
+                    # Create JSON with better error handling
+                    # shellcheck disable=SC2016
+                    jq_output=$("$jq_bin" -n \
+                        --arg product "$ia_product" \
+                        --arg post_date "${ia_post_date:-}" \
+                        --arg url "${ia_url:-}" \
+                        --arg title "${ia_title:-}" \
+                        --arg build "${ia_build:-}" \
+                        --arg version "${ia_version:-}" \
+                        --arg pkg_size "${ia_pkg_size:-0.00}" \
+                        --arg compatible "${ia_compatible:-False}" \
+                        --argjson supported_board_ids "$board_ids_json" \
+                        --argjson supported_device_ids "$device_ids_json" \
+                        '{
+                            product: $product,
+                            post_date: $post_date,
+                            url: $url,
+                            title: $title,
+                            build: $build,
+                            version: $version,
+                            pkg_size: $pkg_size,
+                            compatible: $compatible,
+                            supported_board_ids: $supported_board_ids,
+                            supported_device_ids: $supported_device_ids
+                        }' 2>&1)
+                    
+                    jq_exit_code=$?
+                    if [[ $jq_exit_code -eq 0 && -n "$jq_output" ]]; then
+                        echo "$jq_output" > "$product_tmp_file"
+                        if [[ -s "$product_tmp_file" ]]; then
+                            writelog "[process_product_async] Successfully created JSON for product $ia_product"
+                        else
+                            writelog "[process_product_async] ERROR: JSON file created but is empty for product $ia_product"
+                            writelog "[process_product_async] Debug: jq_output length: ${#jq_output}"
+                            return 1
+                        fi
+                    else
+                        writelog "[process_product_async] ERROR: Failed to create JSON for product $ia_product (exit code: $jq_exit_code)"
+                        writelog "[process_product_async] jq error output: $jq_output"
+                        writelog "[process_product_async] Debug vars: product=$ia_product, title='$ia_title', build='$ia_build', version='$ia_version'"
+                        writelog "[process_product_async] Debug board_ids: '$ia_supportedBoardIDs' -> $board_ids_json"
+                        writelog "[process_product_async] Debug device_ids: '$ia_supportedDeviceIDs' -> $device_ids_json"
+                        return 1
+                    fi
+                fi
             fi
         fi
-    fi
+        
+        local end_time
+        end_time=$(date +%s)
+        local duration=$((end_time - start_time))
+        writelog "[process_product_async] Completed product $ia_product in ${duration}s"
+        
+        return 0
+        
+    } || { # shellcheck disable=SC2317
+        # Error handler - log error
+        writelog "[process_product_async] ERROR: Failed to process product $ia_product after $(($(date +%s) - start_time))s"
+        return 1
+    }
 }
 
 # -----------------------------------------------------------------------------
@@ -1589,21 +1693,78 @@ get_installers_list_json() {
         # Process products in parallel with limited concurrent downloads
         max_concurrent=8
         current_jobs=0
+        job_timeout=30  # Timeout for individual jobs in seconds
+        total_products=$(echo "$products" | wc -l | tr -d ' ')
+        processed_count=0
+        
+        writelog "[get_installers_list_json] Processing $total_products products with max $max_concurrent concurrent jobs"
         
         while read -r ia_product; do
             # Limit concurrent background jobs
+            timeout_count=0
             while (( current_jobs >= max_concurrent )); do
                 sleep 0.1
                 current_jobs=$(jobs -r | wc -l)
+                ((timeout_count++))
+                
+                # Check for stuck jobs every 5 seconds (50 iterations of 0.1s)
+                if (( timeout_count % 50 == 0 )); then
+                    writelog "[get_installers_list_json] Waiting for jobs to complete. Current jobs: $current_jobs, Processed: $processed_count/$total_products"
+                    # Show running job details for debugging
+                    if (( timeout_count >= 500 )); then  # After 50 seconds of waiting
+                        writelog "[get_installers_list_json] WARNING: Jobs may be stuck. Running jobs:"
+                        jobs -l | writelog
+                        # Kill stuck jobs after 60 seconds
+                        if (( timeout_count >= 600 )); then
+                            writelog "[get_installers_list_json] ERROR: Killing stuck background jobs"
+                            jobs -p | xargs kill 2>/dev/null || true
+                            current_jobs=0
+                            break
+                        fi
+                    fi
+                fi
             done
             
             # Process each product in background
+            # writelog "[get_installers_list_json] Starting job for product $ia_product ($(( ++processed_count ))/$total_products)"
             process_product_async "$ia_product" "$tmp_json_file" &
+            job_pid=$!
+            
+            # Store job info for monitoring
+            echo "$job_pid:$ia_product:$(date +%s)" >> "$workdir/downloads/job_tracker.tmp"
             ((current_jobs++))
         done <<< "$products"
         
-        # Wait for all background jobs to complete
-        wait
+        # Wait for all background jobs to complete with timeout monitoring
+        writelog "[get_installers_list_json] Waiting for all background jobs to complete..."
+        wait_start=$(date +%s)
+        max_wait_time=300  # 5 minutes total timeout
+        
+        while (( $(jobs -r | wc -l) > 0 )); do
+            current_time=$(date +%s)
+            elapsed=$((current_time - wait_start))
+            
+            if (( elapsed > max_wait_time )); then
+                writelog "[get_installers_list_json] ERROR: Timeout waiting for jobs. Killing remaining jobs."
+                jobs -p | xargs kill 2>/dev/null || true
+                break
+            fi
+            
+            # Report progress every 10 seconds
+            if (( elapsed % 10 == 0 && elapsed > 0 )); then
+                running_jobs=$(jobs -r | wc -l)
+                writelog "[get_installers_list_json] Still waiting... $running_jobs jobs running after ${elapsed}s"
+                # Check for stuck jobs every 30 seconds
+                if (( elapsed % 30 == 0 )); then
+                    check_job_status
+                fi
+            fi
+            
+            sleep 1
+        done
+        
+        # Clean up job tracker
+        rm -f "$workdir/downloads/job_tracker.tmp"
 
         # Combine all individual product JSON files into final array
         if ls "$workdir/downloads/product_"*.json 1> /dev/null 2>&1; then
@@ -2118,7 +2279,7 @@ overwrite_existing_installer() {
 # -----------------------------------------------------------------------------
 # Things to do after startosinstall has finished preparing
 # -----------------------------------------------------------------------------
-# shellcheck disable=SC2317
+# shellcheck disable=SC2329
 post_prep_work() {
     # set dialog progress for rebootdelay if set
     if [[ "$rebootdelay" -gt 10 && ! $silent && $fs != "yes" ]]; then
@@ -2506,7 +2667,7 @@ download_install_assistant_pkg() {
     ia_version=$("$jq_bin" -r ".version" <<< "$latest_installer")
     ia_build=$("$jq_bin" -r ".build" <<< "$latest_installer")
     trap 'rm -f "$tmpcurlfile"' EXIT
-    writelog "[download_install_assistant_pkg] tmpcurlfile created at $tmpcurlfile" # debug
+    # writelog "[download_install_assistant_pkg] tmpcurlfile created at $tmpcurlfile" # debug
     # download the installer
     curl -L --progress-bar -o "$workdir/InstallAssistantDownload.pkg" -O "$installer_url" 2>> "$tmpcurlfile"
 
