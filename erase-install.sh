@@ -1832,7 +1832,7 @@ select_build_from_dialog() {
     fi
     dialog_args+=(
         --bannertitle "Select macOS Version"
-        --message "Please select the macOS version you wish to download."
+        --message "Please select the macOS version you wish to download.\n\nNote: only versions newer than or equal to $system_version ($system_build) can be installed on this machine. It is not possible to downgrade macOS."
         --icon "${generic_macos_icon}"
         --iconsize "${dialog_icon_size}"
         --button1text "Select"
