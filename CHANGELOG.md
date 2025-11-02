@@ -16,20 +16,24 @@ Since the package on this site is not signed, if you download this package from 
 
 No date
 
-## [40.1]
+## [40.2]
 
 No date
 
-### Updates in 40.1
+### Updates in 40.2
 
+- Added a `--select` option, allowing the user to select an installer based on a dialog with a drop-down list of compatible installers. The selected Build is then used. This only works in the default `--native` mode (not with `--mist` or `--ffi` modes). Note that the user could select an older build than the current system, so this option not recommended for regular users intending to upgrade or erase their device.
 - Improved the speed of downloading dist files in `--native` mode by parallelising the downloads.
 - `jq` will now be installed on macOS 14 or lower if not already present, allowing use of `--native` mode on all devices. The appropriate version of `jq` for Intel or Apple Silicon is installed.
 - Allow the use of `--native` mode on older systems if `jq` is present. Note: `jq` must be in the path (addresses #561).
+- Updated dialogs to use a banner with background colour.
+- Replaced beta catalog for Tahoe with `"https://swscan.apple.com/content/catalogs/others/index-26-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog.gz"`.
 
-### Bugfixes in 40.1
+### Bugfixes in 40.2
 
 - Fixed an issue where user language is not respected in the password entry field (addresses #563).
 - The `extras` folder can now be properly overridden (addresses #547).
+- Fixed obtaining the installer icon when downloading a beta installer, and also when running the script locally without installing the package.
 
 ## [39.1]
 

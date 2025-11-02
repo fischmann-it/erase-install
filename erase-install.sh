@@ -39,7 +39,7 @@ script_name="erase-install"
 pkg_label="com.github.grahampugh.erase-install"
 
 # Version of this script
-version="40.1"
+version="40.2"
 
 # Directory in which to place the macOS installer. Overridden with --path
 installer_directory="/Applications"
@@ -97,33 +97,23 @@ ask_for_credentials() {
     get_default_dialog_args "utility"
     dialog_args=("${default_dialog_args[@]}")
     dialog_args+=(
-        "--title"
-        "${dialog_window_title}"
-        "--icon"
-        "${dialog_confirmation_icon}"
-        "--overlayicon"
-        "SF=key.fill"
-        "--iconsize"
-        "${dialog_icon_size}"
-        "--textfield"
-        "Username,prompt=$current_user"
-        "--textfield"
-        "Password,secure"
-        "--button1text"
-        "Continue"
-        "--timer"
-        "300"
-        "--hidetimerbar"
+        --bannertitle "$dialog_window_title"
+        --icon "$dialog_confirmation_icon"
+        --overlayicon "SF=key.fill"
+        --iconsize "$dialog_icon_size"
+        --textfield "Username,prompt=$current_user"
+        --textfield "Password,secure"
+        --button1text "Continue"
+        --timer "300"
+        --hidetimerbar
     )
     if [[ "$erase" == "yes" ]]; then
         dialog_args+=(
-            "--message"
-            "${(P)dialog_erase_credentials}"
+            --message "${(P)dialog_erase_credentials}"
         )
     else
         dialog_args+=(
-            "--message"
-            "${(P)dialog_reinstall_credentials}"
+            --message "${(P)dialog_reinstall_credentials}"
         )
     fi
     if [[ $max_password_attempts != "infinite" ]]; then
@@ -131,7 +121,7 @@ ask_for_credentials() {
     fi
 
     # run the dialog command (set language for password prompt)
-    "$dialog_bin" "${dialog_args[@]}" -AppleLanguages "($language)" -AppleAccentColor $accent_colour 2>/dev/null > "$dialog_output"
+    "$dialog_bin" "${dialog_args[@]}" -AppleLanguages "($language)" -AppleAccentColor "$accent_colour" 2>/dev/null > "$dialog_output"
 }
 
 # -----------------------------------------------------------------------------
@@ -156,20 +146,13 @@ check_fmm() {
         # set the dialog command arguments
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
-        # original icon: ${dialog_confirmation_icon}
         dialog_args+=(
-            "--title"
-            "${(P)dialog_fmm_title}"
-            "--icon"
-            "${dialog_confirmation_icon}"
-            "--overlayicon"
-            "${dialog_fmm_icon}"
-            "--iconsize"
-            "${dialog_icon_size}"
-            "--message"
-            "${(P)dialog_fmm_desc}"
-            "--timer"
-            "${fmm_wait_timer}"
+            --bannertitle "${(P)dialog_fmm_title}"
+            --icon "${dialog_confirmation_icon}"
+            --overlayicon "${dialog_fmm_icon}"
+            --iconsize "${dialog_icon_size}"
+            --message "${(P)dialog_fmm_desc}"
+            --timer "${fmm_wait_timer}"
         )
         # run the dialog command
         "$dialog_bin" "${dialog_args[@]}" 2>/dev/null & sleep 0.1
@@ -195,16 +178,11 @@ check_fmm() {
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
         dialog_args+=(
-            "--title"
-            "${(P)dialog_fmm_title}"
-            "--icon"
-            "${dialog_confirmation_icon}"
-            "--iconsize"
-            "${dialog_icon_size}"
-            "--overlayicon"
-            "${dialog_fmm_icon}"
-            "--message"
-            "${(P)dialog_fmmenabled_desc}"
+            --bannertitle "${(P)dialog_fmm_title}"
+            --icon "${dialog_confirmation_icon}"
+            --iconsize "${dialog_icon_size}"
+            --overlayicon "${dialog_fmm_icon}"
+            --message "${(P)dialog_fmmenabled_desc}"
         )
         # run the dialog command
         "$dialog_bin" "${dialog_args[@]}" 2>/dev/null
@@ -424,18 +402,12 @@ check_free_space() {
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
         dialog_args+=(
-            "--title"
-            "${dialog_window_title}"
-            "--icon"
-            "${dialog_confirmation_icon}"
-            "--iconsize"
-            "${dialog_icon_size}"
-            "--overlayicon"
-            "SF=externaldrive.fill.badge.xmark,colour=red"
-            "--message"
-            "${(P)dialog_check_desc}"
-            "--button1text"
-            "${(P)dialog_cancel_button}"
+            --bannertitle "${dialog_window_title}"
+            --icon "${dialog_confirmation_icon}"
+            --iconsize "${dialog_icon_size}"
+            --overlayicon "SF=externaldrive.fill.badge.xmark,colour=red"
+            --message "${(P)dialog_check_desc}"
+            --button1text "${(P)dialog_cancel_button}"
         )
         # run the dialog command
         "$dialog_bin" "${dialog_args[@]}" 2>/dev/null
@@ -628,7 +600,7 @@ check_newer_available_from_json_file() {
                     writelog "[check_newer_available_from_json_file] Newer version not found for OS '$system_os'"
                 fi
             else
-                writelog "[check_newer_available_from_json_file] Restricting to same OS as current system ($system_os_version)"
+                writelog "[check_newer_available_from_json_file] Restricting to same OS as current system ($system_os)"
                 # use jq to compare the OS Version with the number before the first decimal point of the version string
                 if "$jq_bin" -e ".[] | select(.version | startswith(\"$system_os\"))" "$installers_list_json_file" > /dev/null; then
                     writelog "[check_newer_available_from_json_file] Newer version found for OS '$system_os'"
@@ -828,20 +800,13 @@ check_power_status() {
         # set the dialog command arguments
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
-        # original icon: ${dialog_confirmation_icon}
         dialog_args+=(
-            "--title"
-            "${(P)dialog_power_title}"
-            "--icon"
-            "${dialog_confirmation_icon}"
-            "--overlayicon"
-            "SF=bolt.slash.fill,colour=red"
-            "--iconsize"
-            "${dialog_icon_size}"
-            "--message"
-            "${(P)dialog_power_desc}"
-            "--timer"
-            "${power_wait_timer}"
+            --bannertitle "${(P)dialog_power_title}"
+            --icon "${dialog_confirmation_icon}"
+            --overlayicon "SF=bolt.slash.fill,colour=red"
+            --iconsize "${dialog_icon_size}"
+            --message "${(P)dialog_power_desc}"
+            --timer "${power_wait_timer}"
         )
         # run the dialog command (stderr to dev/null to prevent Xfont errors)
         "$dialog_bin" "${dialog_args[@]}" 2>/dev/null & sleep 0.1
@@ -867,16 +832,11 @@ check_power_status() {
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
         dialog_args+=(
-            "--title"
-            "${(P)dialog_power_title}"
-            "--icon"
-            "${dialog_confirmation_icon}"
-            "--iconsize"
-            "${dialog_icon_size}"
-            "--overlayicon"
-            "SF=powerplug.fill,colour=red"
-            "--message"
-            "${(P)dialog_nopower_desc}"
+            --bannertitle "${(P)dialog_power_title}"
+            --icon "${dialog_confirmation_icon}"
+            --iconsize "${dialog_icon_size}"
+            --overlayicon "SF=powerplug.fill,colour=red"
+            --message "${(P)dialog_nopower_desc}"
         )
         # run the dialog command
         "$dialog_bin" "${dialog_args[@]}" 2>/dev/null
@@ -906,20 +866,13 @@ confirm() {
     get_default_dialog_args "utility"
     dialog_args=("${default_dialog_args[@]}")
     dialog_args+=(
-        "--title"
-        "$dialog_title"
-        "--icon"
-        "${dialog_confirmation_icon}"
-        "--iconsize"
-        "${dialog_icon_size}"
-        "--overlayicon"
-        "SF=person.fill.checkmark,colour=red"
-        "--message"
-        "$dialog_message"
-        "--button1text"
-        "${(P)dialog_confirmation_button}"
-        "--button2text"
-        "${(P)dialog_cancel_button}"
+        --bannertitle "$dialog_title"
+        --icon "${dialog_confirmation_icon}"
+        --iconsize "${dialog_icon_size}"
+        --overlayicon "SF=person.fill.checkmark,colour=red"
+        --message "$dialog_message"
+        --button1text "${(P)dialog_confirmation_button}"
+        --button2text "${(P)dialog_cancel_button}"
     )
     # run the dialog command
     "$dialog_bin" "${dialog_args[@]}" 2>/dev/null
@@ -1283,7 +1236,7 @@ find_extra_packages() {
 # -----------------------------------------------------------------------------
 # Things to carry out when the script exits
 # -----------------------------------------------------------------------------
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317
 finish() {
     local exit_code=${1:-$?}
     # if we promoted the user then we should demote it again
@@ -1382,7 +1335,7 @@ get_catalog() {
     catalogs[22]="https://swscan.apple.com/content/catalogs/others/index-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog"
     catalogs[23]="https://swscan.apple.com/content/catalogs/others/index-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog"
     catalogs[24]="https://swscan.apple.com/content/catalogs/others/index-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog"
-    catalogs[25]="https://swscan.apple.com/content/catalogs/others/index-26beta-26-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog.gz"
+    catalogs[25]="https://swscan.apple.com/content/catalogs/others/index-26-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog.gz"
 }
 
 # -----------------------------------------------------------------------------
@@ -1392,47 +1345,36 @@ get_default_dialog_args() {
     # set the dialog command arguments
     # $1 - window type
     default_dialog_args=(
-        "--commandfile"
-        "$dialog_log"
-        "--ontop"
-        "--json"
-        "--ignorednd"
-        "--position"
-        "centre"
-        "--quitkey"
-        "c"
+        --bannerimage "colour=#056AE6"
+        --commandfile "$dialog_log"
+        --ontop
+        --json
+        --ignorednd
+        --position "centre"
+        --quitkey "c"
     )
     if [[ "$1" == "fullscreen" ]]; then
         writelog "[get_default_dialog_args] Invoking fullscreen dialog"
         default_dialog_args+=(
-            "--blurscreen"
-            "--width"
-            "50%"
-            "--height"
-            "50%"
-            "--button1disabled"
-            "--centreicon"
-            "--titlefont"
-            "size=32"
-            "--messagefont"
-            "size=24"
-            "--alignment"
-            "centre"
+            --bannerheight "70"
+            --blurscreen
+            --width "50%"
+            --height "50%"
+            --button1disabled
+            --titlefont "size=32,shadow=1"
+            --messagefont "size=24"
+            --alignment "left"
         )
     elif [[ "$1" == "utility" ]]; then
         writelog "[get_default_dialog_args] Invoking utility dialog"
         default_dialog_args+=(
-            "--moveable"
-            "--width"
-            "600"
-            "--height"
-            "300"
-            "--titlefont"
-            "size=20"
-            "--messagefont"
-            "size=14"
-            "--alignment"
-            "left"
+            --bannerheight "40"
+            --moveable
+            --width "600"
+            --height "300"
+            --titlefont "size=20,shadow=1"
+            --messagefont "size=14"
+            --alignment "left"
         )
     fi
 }
@@ -1451,7 +1393,8 @@ get_device_id() {
 # -----------------------------------------------------------------------------
 check_job_status() {
     local job_tracker="$workdir/downloads/job_tracker.tmp"
-    local current_time=$(date +%s)
+    local current_time
+    current_time=$(date +%s)
     local stuck_threshold=60  # Consider jobs stuck after 60 seconds
     
     if [[ -f "$job_tracker" ]]; then
@@ -1486,6 +1429,7 @@ process_product_async() {
     start_time=$(date +%s)
     
     # Add error handling and timeout
+    # shellcheck disable=SC2317 
     {
         # Redirect stdout and stderr to per-job log file
         exec 1>"$workdir/downloads/product_${ia_product}.log" 2>&1
@@ -1624,7 +1568,7 @@ process_product_async() {
         
         return 0
         
-    } || { # shellcheck disable=SC2317
+    } || {
         # Error handler - log error
         writelog "[process_product_async] ERROR: Failed to process product $ia_product after $(($(date +%s) - start_time))s"
         return 1
@@ -1679,7 +1623,8 @@ get_installers_list_json() {
     fi
 
     # if json file exists and was not created today, or has no content (including if it just has an empty list or array), remove it
-    if [[ -f "$installers_list_json_file" && ( $(date -r "$installers_list_json_file" +%Y-%m-%d) != $(date +%Y-%m-%d) || ! -s "$installers_list_json_file" || "$(cat "$installers_list_json_file" | tr -d '[:space:]')" == "[]" ) ]]; then
+    # shellcheck disable=SC2002 
+    if [[ -f "$installers_list_json_file" && ( $(date -r "$installers_list_json_file" +%Y-%m-%d) != $(date +%Y-%m-%d) || ! -s "$installers_list_json_file" || "$(cat "$installers_list_json_file" | tr -d '[:space:]')" == "[]") ]]; then
         writelog "[get_installers_list_json] Removing old or empty JSON file..."
         rm "$installers_list_json_file"
     fi
@@ -1807,6 +1752,7 @@ list_installers_from_json() {
     fi
     get_installers_list_json
     # check if the JSON file exists and contains any data (such as an empty array)
+    # shellcheck disable=SC2002
     if [[ ! -f "$installers_list_json_file" || ! -s "$installers_list_json_file" || "$(cat "$installers_list_json_file" | tr -d '[:space:]')" == "[]" ]]; then
         writelog "[list_installers_from_json] ERROR: $installers_list_json_file not found or empty"
         exit 1
@@ -1854,6 +1800,62 @@ list_installers_from_json() {
 
 
     echo "└────────────┴──────────────────┴─────────┴──────────┴──────────┴────────────┴────────────┘"
+}
+
+select_build_from_dialog() {
+    get_default_dialog_args "utility"
+    dialog_args=("${default_dialog_args[@]}")
+    # produce a list of compatible available macOS versions from the JSON file, and format for dialog, showing only version and build
+    version_list=()
+    if [[ "$beta" == "yes" ]]; then
+        version_list=()
+        while IFS= read -r line; do
+            version_list+=("$line")
+        done < <( "$jq_bin" -r 'sort_by(.version | split(".") | map(tonumber)) | reverse | .[] | select(.compatible == "True") | [
+            (.version // ""),
+            (.build // "")
+        ] | "\(.[0]) (\(.[1]))"' "$installers_list_json_file" )
+    else
+        version_list=()
+        while IFS= read -r line; do
+            version_list+=("$line")
+        done < <( "$jq_bin" -r 'sort_by(.version | split(".") | map(tonumber)) | reverse | .[] | select((.title // "" | test("beta"; "i")) | not and (.compatible == "True")) | [
+            (.version // ""),
+            (.build // "")
+        ] | "\(.[0]) (\(.[1]))"' "$installers_list_json_file" )
+    fi
+    # temp
+    writelog "[select_version_from_dialog] Available versions for selection: ${version_list[*]}"
+    generic_macos_icon="$workdir/icons/Install macOS.png"
+    if [[ ! -f "$generic_macos_icon" ]]; then
+        generic_macos_icon="/System/Library/CoreServices/Install macOS.app/Contents/Resources/InstallAssistant.icns"
+    fi
+    dialog_args+=(
+        --bannertitle "Select macOS Version"
+        --message "Please select the macOS version you wish to download."
+        --icon "${generic_macos_icon}"
+        --iconsize "${dialog_icon_size}"
+        --button1text "Select"
+        --button2text "Cancel"
+        --selecttitle "Available macOS Versions"
+        --selectvalues "$(printf "%s," "${version_list[@]}" | sed 's/,$//')"
+    )
+    writelog "[select_version_from_dialog] Prompting user to select macOS version via dialog"
+    dialog_response=$("$dialog_bin" "${dialog_args[@]}")
+    dialog_exit_code=$?
+    if [[ $dialog_exit_code -eq 0 ]]; then
+        # user clicked Select
+        selected_version_line=$(echo "$dialog_response" | grep 'selectedValue' | cut -d '"' -f4)
+        # extract version and build from selected line
+        selected_version=$(echo "$selected_version_line" | awk -F ' \\(' '{print $1}')
+        prechosen_build=$(echo "$selected_version_line" | awk -F '[\\(\\)]' '{print $2}')
+        writelog "[select_version_from_dialog] User selected version: $selected_version, build: $prechosen_build"
+    else
+        # user clicked Cancel or closed the dialog
+        writelog "[select_version_from_dialog] User cancelled the version selection dialog"
+        echo
+        exit 1
+    fi
 }
 
 # -----------------------------------------------------------------------------
@@ -2279,7 +2281,7 @@ overwrite_existing_installer() {
 # -----------------------------------------------------------------------------
 # Things to do after startosinstall has finished preparing
 # -----------------------------------------------------------------------------
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317
 post_prep_work() {
     # set dialog progress for rebootdelay if set
     if [[ "$rebootdelay" -gt 10 && ! $silent && $fs != "yes" ]]; then
@@ -2295,17 +2297,12 @@ post_prep_work() {
         get_default_dialog_args "$window_type"
         dialog_args=("${default_dialog_args[@]}")
         dialog_args+=(
-            "--title"
-            "${(P)dialog_reinstall_title}"
-            "--icon"
-            "${dialog_install_icon}"
-            "--iconsize"
-            "$iconsize"
-            "--message"
-            "${(P)dialog_rebooting_heading}"
-            "--button1disabled"
-            "--progress"
-            "$rebootdelay"
+            --bannertitle "${(P)dialog_reinstall_title}"
+            --icon "${dialog_install_icon}"
+            --iconsize "$iconsize"
+            --message "${(P)dialog_rebooting_heading}"
+            --button1disabled
+            --progress "$rebootdelay"
         )
         # run the dialog command
         "$dialog_bin" "${dialog_args[@]}" 2>/dev/null & sleep 0.1
@@ -2466,7 +2463,7 @@ download_install_assistant_pkg() {
     # first, if we didn't already check for updates, get the list of available installers using list_installers_json
     list_installers_from_json
 
-    # restrict to a particular major OS if selected
+    # now find the correct installer URL based on the chosen version or OS
     if [[ $prechosen_version ]]; then
         if [[ "$skip_validation" != "yes" ]]; then
             writelog "[download_install_assistant_pkg] Checking for the latest compatible InstallAssistant.pkg for version $prechosen_version"
@@ -3292,6 +3289,8 @@ show_help() {
                         existing system version, downloads it. Most useful with --erase.
     --samebuild         Finds the build of macOS that matches the
                         existing system version, downloads it. Most useful with --erase.
+    --select           Presents a dialog to select from available macOS versions
+                        to download.
     --update            Checks that an existing installer on the system is still the most current
                         valid build, and if not, it will delete it and download the current installer.
     --replace-invalid   Checks that an existing installer on the system is still valid
@@ -3332,7 +3331,7 @@ show_help() {
     --caching-server ...
                         Set mist-cli to use a Caching Server, specifying the URL to the server.
     --pkg               Creates a package from the installer. Ignored if --move, --erase or --install/--reinstall is selected.
-                        Note that mist takes a long time to build the package from the complete installer, so
+                        Note that when using --mist mode, it takes a long time to build the package from the complete installer, so
                         this method is not recommended for normal workflows.
     --keep-pkg          Retains a cached package if --move is used to extract an installer from it.
     --fs                Uses full-screen windows for all stages, not just the
@@ -3349,7 +3348,7 @@ show_help() {
     --no-timeout        The script will normally timeout if the installer has not successfully
                         prepared after 1 hour. This extends that time limit to 24 hours.
     --language          Override the system language with one of the other available languages.
-                        Acceptable values are en, de, fr, nl, es, pt, ja.
+                        Acceptable values are de, en, es, fr, ja, nl, pt, ua.
     --cloneuser         Copy account settings for the user when installing 
                         to a new volume. For use with the --erase option.
 
@@ -3455,16 +3454,11 @@ user_is_invalid() {
     get_default_dialog_args "utility"
     dialog_args=("${default_dialog_args[@]}")
     dialog_args+=(
-        "--title"
-        "${dialog_window_title}"
-        "--icon"
-        "${dialog_warning_icon}"
-        "--iconsize"
-        "${dialog_icon_size}"
-        "--overlayicon"
-        "SF=person.fill.xmark,colour=red"
-        "--message"
-        "${(P)dialog_invalid_user}"
+        --bannertitle "${dialog_window_title}"
+        --icon "${dialog_warning_icon}"
+        --iconsize "${dialog_icon_size}"
+        --overlayicon "SF=person.fill.xmark,colour=red"
+        --message "${(P)dialog_invalid_user}"
     )
     # run the dialog command
     "$dialog_bin" "${dialog_args[@]}" 2>/dev/null
@@ -3486,16 +3480,11 @@ password_is_invalid() {
     get_default_dialog_args "utility"
     dialog_args=("${default_dialog_args[@]}")
     dialog_args+=(
-        "--title"
-        "${dialog_window_title}"
-        "--icon"
-        "${dialog_confirmation_icon}"
-        "--iconsize"
-        "${dialog_icon_size}"
-        "--overlayicon"
-        "SF=person.fill.xmark,colour=red"
-        "--message"
-        "${(P)dialog_invalid_password} $user"
+        --bannertitle "${dialog_window_title}"
+        --icon "${dialog_confirmation_icon}"
+        --iconsize "${dialog_icon_size}"
+        --overlayicon "SF=person.fill.xmark,colour=red"
+        --message "${(P)dialog_invalid_password} $user"
     )
     # run the dialog command
     "$dialog_bin" "${dialog_args[@]}" 2>/dev/null
@@ -3514,16 +3503,11 @@ user_not_volume_owner() {
         get_default_dialog_args "utility"
         dialog_args=("${default_dialog_args[@]}")
         dialog_args+=(
-            "--title"
-            "${dialog_window_title}"
-            "--icon"
-            "${dialog_warning_icon}"
-            "--iconsize"
-            "${dialog_icon_size}"
-            "--overlayicon"
-            "SF=person.fill.xmark,colour=red"
-            "--message"
-            "$account_shortname ${(P)dialog_not_volume_owner}: ${enabled_users}"
+            --bannertitle "${dialog_window_title}"
+            --icon "${dialog_warning_icon}"
+            --iconsize "${dialog_icon_size}"
+            --overlayicon "SF=person.fill.xmark,colour=red"
+            --message "$account_shortname ${(P)dialog_not_volume_owner}: ${enabled_users}"
         )
         # run the dialog command
         "$dialog_bin" "${dialog_args[@]}" 2>/dev/null
@@ -3594,6 +3578,8 @@ while test $# -gt 0 ; do
         -s|--samebuild) samebuild="yes"
             ;;
         -t|--sameos) sameos="yes"
+            ;;
+        --select) select="yes"
             ;;
         -o|--overwrite) overwrite="yes"
             ;;
@@ -4057,6 +4043,15 @@ fi
 
 find_existing_installer
 
+# if the user wants to select from a dialog, prompt them now (overrides other options)
+# only available in native mode
+if [[ $native == "yes" && $select == "yes" ]]; then
+    list_installers_from_json
+    select_build_from_dialog
+    writelog "[download_install_assistant_pkg] User selected InstallAssistant.pkg for build $prechosen_build"
+    # check that this version is available in the list and is compatible with the system
+fi
+
 # Work through various options to decide whether to replace an existing installer
 do_overwrite_existing_installer=0
 
@@ -4146,6 +4141,7 @@ fi
 # check for power
 [[ "$check_power" == "yes"  && ($erase == "yes" || $reinstall == "yes") ]] && check_power_status
 
+# download dialog
 if [[ ! -d "$working_macos_app" && ! -f "$working_installer_pkg" ]]; then
     if [[ ! $silent ]]; then
         # if erasing or reinstalling, open a dialog to state that the download is taking place.
@@ -4162,18 +4158,12 @@ if [[ ! -d "$working_macos_app" && ! -f "$working_installer_pkg" ]]; then
             get_default_dialog_args "$window_type"
             dialog_args=("${default_dialog_args[@]}")
             dialog_args+=(
-                "--title"
-                "${(P)dialog_dl_title}"
-                "--icon"
-                "${dialog_confirmation_icon}"
-                "--overlayicon"
-                "SF=arrow.down"
-                "--iconsize"
-                "$iconsize"
-                "--message"
-                "${(P)dialog_dl_desc}"
-                "--progress"
-                "100"
+                --bannertitle "${(P)dialog_dl_title}"
+                --icon "${dialog_confirmation_icon}"
+                --overlayicon "SF=arrow.down"
+                --iconsize "$iconsize"
+                --message "${(P)dialog_dl_desc}"
+                --progress "100"
             )
             # run the dialog command
             "$dialog_bin" "${dialog_args[@]}" 2>/dev/null & sleep 0.1
@@ -4202,7 +4192,7 @@ if [[ -d "$working_macos_app" ]]; then
 fi
 
 # Move to $installer_directory if move_to_applications_folder flag is included
-# Not relevant for fetch_full_installer option
+# Not relevant for fetch_full_installer or standard mist option
 if [[ $move == "yes" && ("$cached_installer_pkg" || "$cached_installer_app" ) ]]; then
     writelog "[$script_name] Invoking --move option"
     echo "progresstext: Moving installer to Applications folder" >> "$dialog_log"
@@ -4213,6 +4203,7 @@ if [[ $move == "yes" && ("$cached_installer_pkg" || "$cached_installer_app" ) ]]
     fi
 fi
 
+# if not erasing or reinstalling, quit here
 if [[ $erase != "yes" && $reinstall != "yes" ]]; then
     if [[ ! $silent ]]; then
         # quit dialog when the download is complete
@@ -4230,12 +4221,12 @@ if [[ $erase != "yes" && $reinstall != "yes" ]]; then
     exit
 fi
 
-# re-check if there is enough space after a possible installer download
-check_free_space
-
 # -----------------------------------------------------------------------------
 # Steps beyond here are to run startosinstall
 # -----------------------------------------------------------------------------
+
+# re-check if there is enough space after a possible installer download
+check_free_space
 
 echo
 # if we still have a packege we need to move it before we can install it
@@ -4259,8 +4250,8 @@ elif [[ $reinstall == "yes" ]]; then
 fi
 echo
 
+# quit dialog when the download is complete
 if [[ ! $silent ]]; then
-    # quit dialog when the download is complete
     writelog "[$script_name] Sending quit message to dialog log ($dialog_log)"
     echo "quit:" >> "$dialog_log" & sleep 0.1
 fi
@@ -4329,14 +4320,17 @@ fi
 macos_app_name=$(basename "$working_macos_app" | cut -d. -f1)
 
 # look for the image in the workdir
-icon_path="$workdir/icons/$macos_app_name.png"
+icon_path="$workdir/icons/${macos_app_name// Beta/}.png"
 if ! file -b "$icon_path" | grep "PNG image data" > /dev/null; then
+    writelog "[$script_name] Icon $icon_path not found on disk, downloading icon for $macos_app_name installer"
     if [[ ! $no_curl == "yes" ]]; then
         # ensure the icons directory exists
         /bin/mkdir -p "$workdir/icons"
         # download the image from github
-        macos_installer_icon_url="https://github.com/grahampugh/erase-install/blob/main/icons/$macos_app_name.png?raw=true"
-        curl -L "$macos_installer_icon_url" -o "$icon_path"
+        macos_installer_icon_url="https://github.com/grahampugh/erase-install/blob/main/icons/${macos_app_name// /%20}.png?raw=true"
+        if ! curl -L "$macos_installer_icon_url" -o "$icon_path"; then
+            writelog "[$script_name] Could not download icon for $macos_app_name installer from $macos_installer_icon_url"
+        fi
     fi
 fi
 
@@ -4344,8 +4338,10 @@ fi
 if file -b "$icon_path" | grep "PNG image data"; then
     dialog_install_icon="$icon_path"
 elif [[ "$custom_icon" == "yes" ]]; then
+    writelog "[$script_name] Using custom confirmation icon for dialogs"
     dialog_install_icon="$dialog_confirmation_icon"
 else
+    writelog "[$script_name] Using generic warning icon for dialogs"
     dialog_install_icon="warning"
 fi
 
@@ -4364,14 +4360,10 @@ if [[ $erase == "yes" && ! $silent ]]; then
     get_default_dialog_args "$window_type"
     dialog_args=("${default_dialog_args[@]}")
     dialog_args+=(
-        "--title"
-        "${(P)dialog_erase_title}"
-        "--icon"
-        "${dialog_install_icon}"
-        "--message"
-        "${(P)dialog_erase_desc}"
-        "--progress"
-        "100"
+        --bannertitle "${(P)dialog_erase_title}"
+        --icon "${dialog_install_icon}"
+        --message "${(P)dialog_erase_desc}"
+        --progress "100"
     )
     # run the dialog command
     "$dialog_bin" "${dialog_args[@]}" 2>/dev/null & sleep 0.1
@@ -4384,14 +4376,10 @@ elif [[ $reinstall == "yes" && ! $silent ]]; then
     get_default_dialog_args "$window_type"
     dialog_args=("${default_dialog_args[@]}")
     dialog_args+=(
-        "--title"
-        "${(P)dialog_reinstall_title}"
-        "--icon"
-        "${dialog_install_icon}"
-        "--message"
-        "${(P)dialog_reinstall_desc}"
-        "--progress"
-        "100"
+        --bannertitle "${(P)dialog_reinstall_title}"
+        --icon "${dialog_install_icon}"
+        --message "${(P)dialog_reinstall_desc}"
+        --progress "100"
     )
     # run the dialog command
     "$dialog_bin" "${dialog_args[@]}" 2>/dev/null & sleep 0.1
