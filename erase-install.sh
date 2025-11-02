@@ -1846,6 +1846,12 @@ select_build_from_dialog() {
     if [[ $dialog_exit_code -eq 0 ]]; then
         # user clicked Select
         selected_version_line=$(echo "$dialog_response" | grep 'selectedValue' | cut -d '"' -f4)
+        # exit if no selection made
+        if [[ ! $selected_version_line ]]; then
+            writelog "[select_version_from_dialog] No version selected, exiting..."
+            echo
+            exit 1
+        fi
         # extract version and build from selected line
         selected_version=$(echo "$selected_version_line" | awk -F ' \\(' '{print $1}')
         prechosen_build=$(echo "$selected_version_line" | awk -F '[\\(\\)]' '{print $2}')
