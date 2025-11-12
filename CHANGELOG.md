@@ -22,11 +22,11 @@ I have deleted previous beta releases that don't make it to be a latest release.
 
 No date
 
-## [40.2]
+## [40.3]
 
 No date
 
-### Updates in 40.2
+### Updates in 40.3
 
 - Added a `--select` option, allowing the user to select an installer based on a dialog with a drop-down list of compatible installers. The selected Build is then used. This only works in the default `--native` mode (not with `--mist` or `--ffi` modes). Note that the user could select an older build than the current system, so this option not recommended for regular users intending to upgrade or erase their device.
 - Improved the speed of downloading dist files in `--native` mode by parallelising the downloads.
@@ -35,11 +35,14 @@ No date
 - Updated dialogs to use a banner with background colour.
 - Replaced beta catalog for Tahoe with `"https://swscan.apple.com/content/catalogs/others/index-26-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog.gz"`.
 
-### Bugfixes in 40.2
+### Bugfixes in 40.3
 
 - Fixed an issue where user language is not respected in the password entry field (addresses #563).
 - The `extras` folder can now be properly overridden (addresses #547).
 - Fixed obtaining the installer icon when downloading a beta installer, and also when running the script locally without installing the package.
+- Improved version comparison when using `--native` or `--pkg` modes so that beta versions are treated as older than production versions (allows upgrade from a beta to a production version).
+- Processes are now successfully killed if there are multiple processes of the same name. Fixes an issue where `caffeinate` would not be killed if multiple `caffeinate` processes were running.
+- Fixed an issue where not all available installers were listed when using `--native` mode.
 
 ## [39.1]
 
