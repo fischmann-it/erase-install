@@ -34,6 +34,7 @@ No date
 - Allow the use of `--native` mode on older systems if `jq` is present. Note: `jq` must be in the path (addresses #561).
 - Updated dialogs to use a banner with background colour.
 - Replaced beta catalog for Tahoe with `"https://swscan.apple.com/content/catalogs/others/index-26-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog.gz"`.
+- Added a `--trash` option, which will move invalid installers into the Trash rather than deleting them. This is primarily intended for testing so that the installer isn't removed and has to be downloaded again. Note that the user is prompted to allow the file to be moved into Trash, so it's not suitable for a productive environment.
 
 ### Bugfixes in 40.3
 
