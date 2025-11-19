@@ -414,7 +414,7 @@ check_free_space() {
     # if there isn't enough space, then we show a failure message to the user
     if [[ $free_disk_space -ge $min_drive_space ]]; then
         writelog "[check_free_space] OK - $free_disk_space GB free/purgeable disk space detected"
-    elif [[ $silent ]]; then
+    elif [[ $silent || ($erase != "yes" && $reinstall != "yes") ]]; then
         writelog "[check_free_space] ERROR - $free_disk_space GB free/purgeable disk space detected"
         echo
         exit 1
@@ -2461,6 +2461,16 @@ download_install_assistant_pkg() {
                 exit 1
             fi
             writelog "[download_install_assistant_pkg] Found InstallAssistant.pkg for latest version at $installer_url"
+        fi
+    fi
+
+    # check for free disk space if not invoking erase or reinstall options
+    if [[ $erase != "yes" && $reinstall != "yes" ]]; then
+        installer_size=$(curl -sI "$installer_url" | awk '/^Content-Length:/ {print $2}' | tr -d $'\r')
+        if [[ $installer_size ]]; then
+            min_drive_space=$((installer_size / 1000000000 + 1))
+            writelog "[download_install_assistant_pkg] $min_drive_space GB disk space required to download"
+            check_free_space
         fi
     fi
 
