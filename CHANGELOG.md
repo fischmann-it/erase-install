@@ -12,9 +12,39 @@ Since the package on this site is not signed, if you download this package from 
 2. Install from the command line, e.g. `sudo installer -tgt / -pkg /path/to/erase-install-36.0.pkg`
 3. Remove the quarantine bit, e.g. `xattr -d com.apple.quarantine /path/to/erase-install-36.0.pkg`
 
+## Note about release versioning
+
+I've decided that pre-release tags and release versions should have incremental numbers, rather than removing and recreating the same tag and release. This should make it easier for people testing out beta versions to know what they are running. This means that from now on, the latest "full" release is likely to not be a .0 release, but whichever beta I decide is ready for production. I'll also therefore always increment the "major" version number for any new release (not based on an arbitrary decision about what is major or minor).
+
+I have deleted previous beta releases that don't make it to be a latest release. I've also removed all previous full releases, other than v27.3, to tidy things up.
+
 ## [Untagged]
 
 No date
+
+## [40.4]
+
+01.12.2025
+
+### Updates in 40.4
+
+- Added a `--select` option, allowing the user to select an installer based on a dialog with a drop-down list of compatible installers. The selected Build is then used. This only works in the default `--native` mode (not with `--mist` or `--ffi` modes). Note that the user could select an older build than the current system, so this option not recommended for regular users intending to upgrade or erase their device.
+- Improved the speed of downloading dist files in `--native` mode by parallelising the downloads.
+- `jq` will now be installed on macOS 14 or lower if not already present, allowing use of `--native` mode on all devices. The appropriate version of `jq` for Intel or Apple Silicon is installed.
+- Allow the use of `--native` mode on older systems if `jq` is present. Note: `jq` must be in the path (addresses #561).
+- Updated dialogs to use a banner with background colour.
+- Replaced beta catalog for Tahoe with `"https://swscan.apple.com/content/catalogs/others/index-26-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog.gz"`.
+- Added a `--trash` option, which will move invalid installers into the Trash rather than deleting them. This is primarily intended for testing so that the installer isn't removed and has to be downloaded again. Note that the user is prompted to allow the file to be moved into Trash, so it's not suitable for a productive environment.
+- Added a drive space check to `--native` mode when downloading (#569, thanks @anewhouse).
+
+### Bugfixes in 40.4
+
+- Fixed an issue where user language is not respected in the password entry field (addresses #563).
+- The `extras` folder can now be properly overridden (addresses #547).
+- Fixed obtaining the installer icon when downloading a beta installer, and also when running the script locally without installing the package.
+- Improved version comparison when using `--native` or `--pkg` modes so that beta versions are treated as older than production versions (allows upgrade from a beta to a production version).
+- Processes are now successfully killed if there are multiple processes of the same name. Fixes an issue where `caffeinate` would not be killed if multiple `caffeinate` processes were running.
+- Fixed an issue where not all available installers were listed when using `--native` mode.
 
 ## [39.1]
 
@@ -773,7 +803,7 @@ Thanks to '@ahousseini' for various contributions to this release
 
 - Initial version. Expects a manual choice of installer from `installinstallmacos.py`.
 
-[untagged]: https://github.com/grahampugh/erase-install/compare/v39.1...HEAD
+[untagged]: https://github.com/grahampugh/erase-install/compare/v40.0...HEAD
 [39.1]: https://github.com/grahampugh/erase-install/compare/v39.0...v39.1
 [39.0]: https://github.com/grahampugh/erase-install/compare/v38.0...v39.0
 [38.0]: https://github.com/grahampugh/erase-install/compare/v37.0...v38.0
