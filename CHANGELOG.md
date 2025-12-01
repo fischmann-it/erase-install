@@ -22,11 +22,11 @@ I have deleted previous beta releases that don't make it to be a latest release.
 
 No date
 
-## [40.3]
+## [40.4]
 
-No date
+01.12.2025
 
-### Updates in 40.3
+### Updates in 40.4
 
 - Added a `--select` option, allowing the user to select an installer based on a dialog with a drop-down list of compatible installers. The selected Build is then used. This only works in the default `--native` mode (not with `--mist` or `--ffi` modes). Note that the user could select an older build than the current system, so this option not recommended for regular users intending to upgrade or erase their device.
 - Improved the speed of downloading dist files in `--native` mode by parallelising the downloads.
@@ -35,8 +35,9 @@ No date
 - Updated dialogs to use a banner with background colour.
 - Replaced beta catalog for Tahoe with `"https://swscan.apple.com/content/catalogs/others/index-26-15-14-13-12-10.16-10.15-10.14-10.13-10.12-10.11-10.10-10.9-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog.gz"`.
 - Added a `--trash` option, which will move invalid installers into the Trash rather than deleting them. This is primarily intended for testing so that the installer isn't removed and has to be downloaded again. Note that the user is prompted to allow the file to be moved into Trash, so it's not suitable for a productive environment.
+- Added a drive space check to `--native` mode when downloading (#569, thanks @anewhouse).
 
-### Bugfixes in 40.3
+### Bugfixes in 40.4
 
 - Fixed an issue where user language is not respected in the password entry field (addresses #563).
 - The `extras` folder can now be properly overridden (addresses #547).
