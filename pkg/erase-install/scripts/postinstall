@@ -12,7 +12,7 @@ system_version=$( /usr/bin/sw_vers -productVersion )
 # macOS 12 and greater uses the latest swiftDialog
 system_os=$(/usr/bin/cut -d. -f 1 <<< "$system_version")
 
-if [[ $system_os -ge 12 ]]; then
+if [[ $system_os -gt 11 ]]; then
     if [[ -d "/Library/Management/erase-install/Dialog.app" ]]; then
         echo "swiftDialog successfully installed"
     else
@@ -40,7 +40,7 @@ else
 fi
 
 # jq
-if [[ $system_os -le 14 && ! -f /usr/local/bin/jq ]]; then
+if [[ $system_os -lt 15 && ! -f /usr/local/bin/jq ]]; then
     # check if the mac is arm64 or intel
     arch=$(/usr/bin/uname -m)
     if [[ $arch == "arm64" ]]; then

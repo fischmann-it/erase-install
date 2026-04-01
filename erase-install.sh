@@ -39,7 +39,7 @@ script_name="erase-install"
 pkg_label="com.github.grahampugh.erase-install"
 
 # Version of this script
-version="41.1"
+version="42.0"
 
 # Directory in which to place the macOS installer. Overridden with --path
 installer_directory="/Applications"
@@ -59,7 +59,7 @@ mist_tag_required="v2.2"
 
 # Required swiftDialog version
 # This ensures a compatible swiftDialog version is used if not using the package installer
-swiftdialog_tag_required="v3.0.0"
+swiftdialog_tag_required="v3.0.1"
 
 # Required swiftDialog version for macOS 11
 # This ensures a compatible swiftDialog version is used if not using the package installer
@@ -302,7 +302,7 @@ check_for_swiftdialog_app() {
     fi
 
     # Determine the correct required version based on OS version
-    if ! is-at-least "14" "$system_version"; then
+    if ! is-at-least "15" "$system_version"; then
         # we need to get the older version of swiftDialog that is compatible with Big Sur, Monterey, Ventura, and Sonoma
         swiftdialog_tag_required="$swiftdialog_bigsur_tag_required"
     fi
@@ -313,7 +313,7 @@ check_for_swiftdialog_app() {
     else
         writelog "[check_for_swiftdialog_app] swiftDialog v$dialog_string is installed but the recommended version is $swiftdialog_tag_required."
         if [[ ! $no_curl ]]; then
-            if ! is-at-least "14" "$system_version"; then
+            if ! is-at-least "15" "$system_version"; then
                 writelog "[check_for_swiftdialog_app] Downloading swiftDialog for macOS $system_version..."
                 # obtain the download URL
                 swiftdialog_api_url="https://api.github.com/repos/swiftDialog/swiftDialog/releases"

@@ -22,6 +22,18 @@ I have deleted previous beta releases that don't make it to be a latest release.
 
 No date
 
+## [42.0]
+
+No date
+
+### Updates in 42.0
+
+- Bumped swiftDialog version to `v3.0.1` except for systems running macOS 14 or older which still get `v2.2.1`. Note that the installer package includes both version `v3.0.1` and `v2.2.1`, and the appropriate one will be installed.
+
+### Bugfixes in 42.0
+
+- Fixed check for swiftDialog version on macOS 14 (addresses #586).
+
 ## [41.1]
 
 24.02.2026
@@ -821,7 +833,9 @@ Thanks to '@ahousseini' for various contributions to this release
 
 - Initial version. Expects a manual choice of installer from `installinstallmacos.py`.
 
-[untagged]: https://github.com/grahampugh/erase-install/compare/v41.0...HEAD
+[untagged]: https://github.com/grahampugh/erase-install/compare/v42.0...HEAD
+[42.0]: https://github.com/grahampugh/erase-install/compare/v41.1...v42.0
+[41.1]: https://github.com/grahampugh/erase-install/compare/v40.4...v41.1
 [40.4]: https://github.com/grahampugh/erase-install/compare/v39.1...v40.4
 [39.1]: https://github.com/grahampugh/erase-install/compare/v39.0...v39.1
 [39.0]: https://github.com/grahampugh/erase-install/compare/v38.0...v39.0
