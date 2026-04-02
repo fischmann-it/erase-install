@@ -56,7 +56,6 @@ build:
 	cd "/private/tmp/swiftDialog_payload" && cat "/private/tmp/swiftDialog_expanded/tmp-package.pkg/Payload" | gunzip -dc | cpio -i ;\
 	cp -r "/private/tmp/swiftDialog_payload/Library/Application Support/Dialog/Dialog.app" "$(PKG_SCRIPTS)/Dialog-bigsur.app" ;\
 	rm -rf "/private/tmp/swiftDialog_expanded" "/private/tmp/swiftDialog_payload" "/private/tmp/swiftDialog.pkg"
-
 	@echo
 	mist_tag=$$(awk -F '=' '/mist_tag_required=/ {print $$NF}' $(CURDIR)/erase-install.sh | tr -d '"') ;\
 	echo "## Downloading mist-cli $$mist_tag" ;\
@@ -95,5 +94,6 @@ clean :
 	rm -Rf "$(PKG_ROOT)/Library/Management/erase-install/"* ||:
 	rm $(CURDIR)/pkg/erase-install/build/*.pkg ||:
 	rm -Rf $(CURDIR)/pkg/erase-install/scripts/*.pkg ||:
+	rm -Rf $(CURDIR)/pkg/erase-install/scripts/*.app ||:
 	rm $(CURDIR)/pkg/erase-install/scripts/jq* ||:
 	rm -Rf $(CURDIR)/pkg/erase-install/payload ||:
