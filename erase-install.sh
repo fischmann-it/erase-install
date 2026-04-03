@@ -4,7 +4,6 @@
 # this is to use sed in the case statements
 # shellcheck disable=SC2034,SC2296
 # these are due to the dynamic variable assignments used in the localization strings
-# set -x
 
 : <<DOC
 ==============================================================================
