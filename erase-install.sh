@@ -270,7 +270,6 @@ check_for_mist() {
 # Download dialog if not present and not --silent mode
 # -----------------------------------------------------------------------------
 check_for_swiftdialog_app() {
-    system_version="14.7.8"
     # swiftDialog 3.0 is compatible with macOS 15+. Remove this version if present on older OSs
     if [[ -d "$dialog_portable_app" ]]; then
         dialog_bin="$dialog_portable_app/Contents/MacOS/dialogcli"
