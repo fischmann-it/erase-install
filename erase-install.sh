@@ -4,6 +4,7 @@
 # this is to use sed in the case statements
 # shellcheck disable=SC2034,SC2296
 # these are due to the dynamic variable assignments used in the localization strings
+# set -x
 
 : <<DOC
 ==============================================================================
@@ -270,6 +271,7 @@ check_for_mist() {
 # Download dialog if not present and not --silent mode
 # -----------------------------------------------------------------------------
 check_for_swiftdialog_app() {
+    system_version="14.7.8"
     # swiftDialog 3.0 is compatible with macOS 15+. Remove this version if present on older OSs
     if [[ -d "$dialog_portable_app" ]]; then
         dialog_bin="$dialog_portable_app/Contents/MacOS/dialogcli"
@@ -298,8 +300,8 @@ check_for_swiftdialog_app() {
     else
         writelog "[check_for_swiftdialog_app] swiftDialog v$dialog_string is installed but the recommended version is $swiftdialog_tag_required."
         if [[ ! $no_curl ]]; then
-            if ! is-at-least "11" "$system_version"; then
-                writelog "[check_for_swiftdialog_app] Downloading swiftDialog for macOS $system_version..."
+            if is-at-least "11" "$system_version"; then
+                writelog "[check_for_swiftdialog_app] Downloading swiftDialog $swiftdialog_tag_required for macOS $system_version..."
                 # obtain the download URL
                 swiftdialog_api_url="https://api.github.com/repos/swiftDialog/swiftDialog/releases"
                 dialog_download_url=$(/usr/bin/curl -sL -H "Accept: application/json" "$swiftdialog_api_url/tags/$swiftdialog_tag_required" | ljt assets.0.browser_download_url -)
