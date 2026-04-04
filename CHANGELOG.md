@@ -22,18 +22,20 @@ I have deleted previous beta releases that don't make it to be a latest release.
 
 No date
 
-## [42.1]
+## [42.2]
 
 No date
 
-### Updates in 42.1
+### Updates in 42.2
 
-- Bumped swiftDialog version to `v3.0.1` except for systems running macOS 14 or older which still get `v2.2.1`. Note that the installer package includes both version `v3.0.1` and `v2.2.1`, and the appropriate one will be installed.
-- If swiftDialog is missing from the workdir, for example if only using the script rather than the package, then install the appropriate version of swiftDialog for the OS into the workdir rather than the default location.
+- Bumped required swiftDialog version to `v3.0.1` except for systems running macOS 14 or older which still get `v2.2.1`. Note that the installer package includes both version `v3.0.1` and `v2.2.1`, and the appropriate one will be installed.
+- swiftDialog check is only made when required, meaning that the `--list` and `--download` (without `--dialog-on-download`) options will work without swiftDialog.
+- If swiftDialog is reqiured but missing from the workdir, for example if only using the script rather than the package, then install the appropriate version of swiftDialog for the OS into the workdir rather than the default location.
 
-### Bugfixes in 42.1
+### Bugfixes in 42.2
 
 - Fixed check for swiftDialog version on macOS 14 (addresses #586).
+- Fixed check for swiftDialog version on macOS 15+ that was introduced in 42.1.
 - Banner is not used when swiftDialog 2.2.1 is used (incompatible dialog arguments).
 
 ## [41.1]
