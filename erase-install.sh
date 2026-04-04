@@ -4134,13 +4134,6 @@ if [[ $list == "yes" ]]; then
         /bin/cat "$workdir/ffi-list-full-installers.txt"
     elif [[ $native == "yes" ]]; then
         list_installers_from_json
-        # if select option is used, need dialog here
-        if [[ $select == "yes" && ! $silent ]]; then
-            # Ensure dialog is available if we haven't checked yet
-            if [[ ! -f "$dialog_bin" ]]; then
-                check_for_swiftdialog_app
-            fi
-        fi
     else
         get_mist_list
     fi
@@ -4190,10 +4183,6 @@ find_existing_installer
 # if the user wants to select from a dialog, prompt them now (overrides other options)
 # only available in native mode
 if [[ $native == "yes" && $select == "yes" ]]; then
-    # Ensure dialog is available if we haven't checked yet
-    if [[ ! $silent && ! -f "$dialog_bin" ]]; then
-        check_for_swiftdialog_app
-    fi
     list_installers_from_json
     select_build_from_dialog
     writelog "[download_install_assistant_pkg] User selected InstallAssistant.pkg for build $prechosen_build"
@@ -4289,19 +4278,11 @@ fi
 
 # check for Find My
 if [[ "$check_fmm" == "yes"  && ($erase == "yes") ]]; then
-    # Ensure dialog is available if we haven't checked yet
-    if [[ ! $silent && ! -f "$dialog_bin" ]]; then
-        check_for_swiftdialog_app
-    fi
     check_fmm
 fi
 
 # check for power
 if [[ "$check_power" == "yes"  && ($erase == "yes" || $reinstall == "yes") ]]; then
-    # Ensure dialog is available if we haven't checked yet
-    if [[ ! $silent && ! -f "$dialog_bin" ]]; then
-        check_for_swiftdialog_app
-    fi
     check_power_status
 fi
 
@@ -4310,12 +4291,7 @@ if [[ ! -d "$working_macos_app" && ! -f "$working_installer_pkg" ]]; then
     if [[ ! $silent ]]; then
         # if erasing or reinstalling, open a dialog to state that the download is taking place.
         if [[ $erase == "yes" || $reinstall == "yes" || ($dl_dialog == "yes" && $check_for_activity != "yes") ]]; then
-            # Ensure dialog is available if we haven't checked yet
-            if [[ ! -f "$dialog_bin" ]]; then
-                check_for_swiftdialog_app
-            fi
- 
-             # if no_fs is set, show a utility window instead of the full screen display (for test purposes)
+            # if no_fs is set, show a utility window instead of the full screen display (for test purposes)
             if [[ $fs == "yes" ]]; then
                 window_type="fullscreen"
                 iconsize=200
@@ -4428,10 +4404,6 @@ fi
 
 # if configured to do so, display a confirmation window to the user
 if [[ $confirm == "yes" && ! $silent ]]; then
-    # Ensure dialog is available if we haven't checked yet
-    if [[ ! -f "$dialog_bin" ]]; then
-        check_for_swiftdialog_app
-    fi
     confirm
 fi
 
@@ -4530,11 +4502,6 @@ fi
 
 # dialogs for erase
 if [[ $erase == "yes" && ! $silent ]]; then
-    # Ensure dialog is available if we haven't checked yet
-    if [[ ! -f "$dialog_bin" ]]; then
-        check_for_swiftdialog_app
-    fi
-
     # set the dialog command arguments
     get_default_dialog_args "$window_type"
     dialog_args=("${default_dialog_args[@]}")
@@ -4553,10 +4520,6 @@ if [[ $erase == "yes" && ! $silent ]]; then
 # dialogs for reinstallation
 elif [[ $reinstall == "yes" && ! $silent ]]; then
     # Ensure dialog is available if we haven't checked yet
-    if [[ ! -f "$dialog_bin" ]]; then
-        check_for_swiftdialog_app
-    fi
-
     # set the dialog command arguments
     get_default_dialog_args "$window_type"
     dialog_args=("${default_dialog_args[@]}")
