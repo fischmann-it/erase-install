@@ -4519,7 +4519,6 @@ if [[ $erase == "yes" && ! $silent ]]; then
 
 # dialogs for reinstallation
 elif [[ $reinstall == "yes" && ! $silent ]]; then
-    # Ensure dialog is available if we haven't checked yet
     # set the dialog command arguments
     get_default_dialog_args "$window_type"
     dialog_args=("${default_dialog_args[@]}")
