@@ -300,7 +300,7 @@ check_for_swiftdialog_app() {
         fi
         if [[ ! $no_curl ]]; then
             if is-at-least "11" "$system_version"; then
-                writelog "[check_for_swiftdialog_app] Downloading swiftDialog for macOS $system_version..."
+                writelog "[check_for_swiftdialog_app] Downloading swiftDialog $swiftdialog_tag_required for macOS $system_version..."
                 # obtain the download URL
                 swiftdialog_api_url="https://api.github.com/repos/swiftDialog/swiftDialog/releases"
                 dialog_download_url=$(/usr/bin/curl -sL -H "Accept: application/json" "$swiftdialog_api_url/tags/$swiftdialog_tag_required" | ljt assets.0.browser_download_url -)
