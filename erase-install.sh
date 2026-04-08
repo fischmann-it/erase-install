@@ -39,7 +39,7 @@ script_name="erase-install"
 pkg_label="com.github.grahampugh.erase-install"
 
 # Version of this script
-version="42.2"
+version="42.3"
 
 # Directory in which to place the macOS installer. Overridden with --path
 installer_directory="/Applications"
@@ -295,6 +295,7 @@ check_for_swiftdialog_app() {
     else
         if [[ -f "$dialog_bin" ]]; then
             writelog "[check_for_swiftdialog_app] swiftDialog v$dialog_string is installed but the recommended version is $swiftdialog_tag_required."
+            /bin/rm -rf "$dialog_portable_app"
         else
             writelog "[check_for_swiftdialog_app] swiftDialog is not installed. Proceeding to install..."
         fi
