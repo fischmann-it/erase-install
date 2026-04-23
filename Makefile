@@ -5,6 +5,7 @@ PKG_SCRIPTS := $(CURDIR)/pkg/erase-install/scripts
 PKG_BUILD := $(CURDIR)/pkg/erase-install/build
 GITHUB_TOKEN_FILE := /Users/Shared/gh_token
 PKG_VERSION :=$(shell awk -F '=' '/^version=/ {print $$NF}' $(CURDIR)/erase-install.sh | tr -d '"')
+SIGN_ID_PKG ?= Graham Pugh
 
 all: build
 
@@ -85,7 +86,7 @@ build:
 	@echo "## Making package in '$(PKG_ROOT)' directory"
 	pkgbuild --analyze --root "$(PKG_ROOT)" "$(PKG_BUILD)/erase-install-component.plist"
 	/usr/libexec/PlistBuddy -c 'Set :0:BundleIsRelocatable boolean false' "$(PKG_BUILD)/erase-install-component.plist"
-	pkgbuild --root "$(PKG_ROOT)" --identifier "com.github.grahampugh.erase-install.pkg" --version "$(PKG_VERSION)" --install-location "/" --component-plist "$(PKG_BUILD)/erase-install-component.plist" --scripts "$(PKG_SCRIPTS)" "$(PKG_BUILD)/erase-install-$(PKG_VERSION).pkg"
+	pkgbuild --root "$(PKG_ROOT)" --identifier "com.github.grahampugh.erase-install.pkg" --version "$(PKG_VERSION)" --install-location "/" --component-plist "$(PKG_BUILD)/erase-install-component.plist" --scripts "$(PKG_SCRIPTS)" --sign "$(SIGN_ID_PKG)" "$(PKG_BUILD)/erase-install-$(PKG_VERSION).pkg"
 	open $(PKG_BUILD)
 
 .PHONY : clean
